@@ -5,6 +5,7 @@ CC = g++
 CFLAGS = -std=c++0x -Wall -g
 OBJ = src/obj
 LIB = src/lib
+TAR_NAME = team_name_sharma_syakhroza_vujnovich_Btree.tar.gz
 
 RHEL_VER := $(shell uname -r | grep -o -E '(el5|el6)')
 ifeq ($(RHEL_VER), el5)
@@ -51,3 +52,6 @@ clean:
 
 doc:
 	doxygen Doxyfile
+
+tar:
+	tar -czvf $(TAR_NAME) --exclude="*.tar.gz" --exclude="*.pdf" --exclude="docs" --exclude="README*" --exclude="*.o" *
