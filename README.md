@@ -13,7 +13,7 @@ $ make
 
 To build the real API documentation (requires Doxygen):
 ```
-$ make docs
+$ make doc
 ```
 
 To view the documentation, open docs/index.html in your web browser after
