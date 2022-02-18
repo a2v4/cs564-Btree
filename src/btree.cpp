@@ -62,7 +62,31 @@ void BTreeIndex::startScan(const void* lowValParm,
 				   const void* highValParm,
 				   const Operator highOpParm)
 {
+	// BadOpcodesException takes higher precedence over BadScanrangeException
+	// only support GT and GTE here
+	if (lowOpParm != GT || lowOpParm != GTE) {
+		throw BadOpcodesException();
+	}
+	// only support LT and LTE here
+	if (highOpParm != LT || highOpParm != LTE) {
+		throw BadOpcodesException();
+	}
 
+	// If lowValue > highValue, throw the exception BadScanrangeException.
+	if (lowOpParm > highOpParm) {
+		throw BadScanrangeException();
+	}
+
+	// Both the high and low values are in a binary form, i.e., for integer
+	// keys, these point to the address of an integer.
+
+
+
+	// // If there is no key in the B+ tree that satisfies the scan criteria,
+	// // throw the exception NoSuchKeyFoundException.
+	// if () {
+	// 	throw NoSuchKeyFoundException();
+	// }
 }
 
 // -----------------------------------------------------------------------------
