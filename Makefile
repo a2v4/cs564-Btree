@@ -54,4 +54,4 @@ doc:
 	doxygen Doxyfile
 
 tar:
-	tar -czvf $(TAR_NAME) --exclude="*.tar.gz" --exclude="*.pdf" --exclude="docs" --exclude="README*" --exclude="*.o" *
+	tar -czvf $(TAR_NAME) --exclude="*.tar.gz" --exclude="*.pdf" --exclude="docs" --exclude="README*" --exclude="*.o" --exclude="*.zip" *
