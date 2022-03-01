@@ -26,15 +26,48 @@ namespace badgerdb
 // BTreeIndex::BTreeIndex -- Constructor
 // -----------------------------------------------------------------------------
 
-BTreeIndex::BTreeIndex(const std::string & relationName,
-		std::string & outIndexName,
-		BufMgr *bufMgrIn,
-		const int attrByteOffset,
-		const Datatype attrType)
+BTreeIndex::BTreeIndex(const std::string &relationName,
+					   std::string &outIndexName,
+					   BufMgr *bufMgrIn,
+					   const int attrByteOffset,
+					   const Datatype attrType)
 {
+	std::ostringstream idxStr;
+	idxStr << relationName << '.' << attrByteOffset;
+	outIndexName = idxStr.str();
 
+	// Check to see if the corresponding index file exists. If so, open the file.
+	// If not, create it
+	try
+	{
+		BlobFile::open(relationName);
+	}
+	catch (FileNotFoundException &e)
+	{
+		file = new BlobFile(outIndexName, true);
+		Page *headerPage;
+		bufMgrIn->allocPage(file, headerPageNum, headerPage);
+		// insert metadata in header page
+		IndexMetaInfo *metadata = (IndexMetaInfo *)headerPage;
+
+		strcpy(metadata->relationName, relationName.c_str());
+		metadata->attrByteOffset = attrByteOffset;
+		metadata->attrType = attrType;
+		metadata->rootPageNo = rootPageNum;
+
+		Page *rootPage;
+		bufMgrIn->allocPage(file, rootPageNum, rootPage);
+
+		// insert entries for every tuple in the base relation using FileScan class.
+		FileScan *scanner = new FileScan(relationName, bufMgrIn);
+		std::string currRecord = scanner->getRecord();
+
+		// loop through every record in the file that contains the the relation (relationName)
+		//   while() {
+
+		//  }
+	}
 }
-
 
 // -----------------------------------------------------------------------------
 // BTreeIndex::~BTreeIndex -- destructor
