@@ -78,9 +78,16 @@ void BTreeIndex::scanNext(RecordId& outRid)
 // BTreeIndex::endScan
 // -----------------------------------------------------------------------------
 //
-void BTreeIndex::endScan() 
+void BTreeIndex::endScan()
 {
-
+	if (scanExecuting == false)
+	{
+		throw Scan NotInitialException();
+	}
+	else
+	{
+		scanExecuting == false;
+		bufMgr->unPinPage(file, currentPageNum, false);
+	}
 }
-
 }
