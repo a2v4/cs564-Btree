@@ -63,30 +63,24 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 		 FileScan * scanner = new FileScan(relationName, bufMgrIn);
 		 std::string currRecord = scanner->getRecord();
 		 RecordId recordId;
-		 try
-		 {
-			 while (true)
-			 {
-				
-				scanner->scanNext(recordId);
-				const char *key = currRecord.c_str() + attrByteOffset;
-
-				//std::string *key = &currRecord + attrByteOffset;
-				insertEntry(key, recordId);
-			 }
-		} catch(EndOfFileException &e) {
-
+		 while (true){
+			try {
+					scanner->scanNext(recordId);
+					const char *key = currRecord.c_str() + attrByteOffset;
+					insertEntry(key, recordId);
+				} catch (EndOfFileException &e) {
+					break;
+				}
+			}
 		}
-    }
-}  
+    }  
 
 
 // -----------------------------------------------------------------------------
 // BTreeIndex::~BTreeIndex -- destructor
 // -----------------------------------------------------------------------------
 
-BTreeIndex::~BTreeIndex()
-{
+BTreeIndex::~BTreeIndex() {
 	scanExecuting = false;
   	bufMgr->flushFile(file);
   	delete file;
@@ -112,19 +106,24 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 	bufMgr->readPage(file, rootPageNum, root);
 
 	//if leaf node, make helper for insert in leaf Node
-	//compare root page no to starting root page number, if true
+	//compare root page no to starting root page number, if true, then leaf else non-leaf node
 
 	RIDKeyPair<int> pair;
 	pair.set(rid, (*((int *)key)));
 
 
+
 }
 
 
-void BTreeIndex::insertToLeaf(current node, current node's number (page id), key value pair)
+void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
+
+}
 
 
-void BTreeIndex::insertToNonLeaf()
+void BTreeIndex::insertToNonLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
+
+}
 
 
 
@@ -180,3 +179,4 @@ void BTreeIndex::endScan()
 }
 
 }
+
