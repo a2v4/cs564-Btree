@@ -121,7 +121,7 @@ void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<i
 }
 
 
-void BTreeIndex::insertToNonLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
+void BTreeIndex::insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
 
 }
 
