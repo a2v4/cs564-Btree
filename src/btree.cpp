@@ -106,13 +106,13 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 	bufMgr->readPage(file, rootPageNum, root);
 
 	//if leaf node, make helper for insert in leaf Node
-	//compare root page no to starting root page number, if true, then leaf else non-leaf node
+	//compare page number equal to starting root page number, if true, then leaf else non-leaf node
 
 	RIDKeyPair<int> pair;
 	pair.set(rid, (*((int *)key)));
 
-
-
+	LeafNodeInt *currNode;
+	
 }
 
 
