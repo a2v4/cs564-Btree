@@ -62,6 +62,10 @@ void BTreeIndex::startScan(const void* lowValParm,
 				   const void* highValParm,
 				   const Operator highOpParm)
 {
+	// end current scan and get ready to start a new scan
+	if (scanExecuting == true) {
+		endScan();
+	}
 	// BadOpcodesException takes higher precedence over BadScanrangeException
 	// only support GT and GTE here
 	if (lowOpParm != GT || lowOpParm != GTE) {
@@ -79,6 +83,13 @@ void BTreeIndex::startScan(const void* lowValParm,
 
 	// Both the high and low values are in a binary form, i.e., for integer
 	// keys, these point to the address of an integer.
+
+	// Start from root to find out the leaf page that contains the first RecordID
+	// that satisfies the scan parameters. Keep that page pinned in the buffer pool.
+	currentPageNum = rootPageNum;
+	bufMgr->readPage(file, rootPageNum, currentPageData);
+	bufMgr->unPinPage(file, currentPageNum, true);
+	
 
 
 
