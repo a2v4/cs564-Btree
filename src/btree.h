@@ -333,6 +333,8 @@ class BTreeIndex {
   void insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
 
   void insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
+
+  void splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
   /**
    * Begin a filtered scan of the index.  For instance, if the method is called
    * using ("a",GT,"d",LTE) then we should seek all entries with a value

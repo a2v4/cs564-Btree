@@ -55,10 +55,11 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 
 		 Page *rootPage;
 		 bufMgrIn->allocPage(file, rootPageNum, rootPage);
-		 
-		 //initialize root
+		 currentPageNum = rootPageNum;
+		 currentPageData = rootPage;
+		 // initialize root
 		 LeafNodeInt *root = (LeafNodeInt *)rootPage;
-
+		 leafOccupancy = 0;
 		 // insert entries for every tuple in the base relation using FileScan class.
 		 FileScan * scanner = new FileScan(relationName, bufMgrIn);
 		 std::string currRecord = scanner->getRecord();
@@ -101,23 +102,31 @@ BTreeIndex::~BTreeIndex() {
 
 void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 {
-
-	Page *root;
-	bufMgr->readPage(file, rootPageNum, root);
-
-	//if leaf node, make helper for insert in leaf Node
-	//compare page number equal to starting root page number, if true, then leaf else non-leaf node
-
+	
 	RIDKeyPair<int> pair;
 	pair.set(rid, (*((int *)key)));
-
-	LeafNodeInt *currNode;
 	
+	// compare page number equal to starting root page number, if true, then leaf else non-leaf node
+	//if leaf node, make helper for insert in leaf Node
+	if(currentPageNum == rootPageNum) {
+		//leafNode
+		LeafNodeInt *currNode;
+		insertToLeaf(currNode, currentPageNum, pair);
+	} else {
+		//non-leaf node
+		NonLeafNodeInt *currNode;
+		insertToNonLeaf(currNode, currentPageNum, pair);
+	}
 }
 
 
 void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
-
+	if(leaf occupancy == INTARRAYLEAFSIZE) {
+		splitChild(currNode, pageid, pair);
+	} else {
+		//insert into available page in node
+		
+	}
 }
 
 
@@ -125,6 +134,10 @@ void BTreeIndex::insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKey
 
 }
 
+
+void BTreeIndex::splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
+
+}
 
 
 // -----------------------------------------------------------------------------
