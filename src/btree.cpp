@@ -121,7 +121,7 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 
 
 void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
-	if(leaf occupancy == INTARRAYLEAFSIZE) {
+	if(leafOccupancy == INTARRAYLEAFSIZE) {
 		splitChild(currNode, pageid, pair);
 	} else {
 		//insert into available page in node
