@@ -157,12 +157,10 @@ void BTreeIndex::splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int
 	// connect currNode to new Node
 	currNode->rightSibPageNo = pageid;
 
-	//create new root
-	
-
-	//copy up leftmost key on new node up to the root
-
-
+	//create new root which will be a Non leaf node
+	NonLeafNodeInt *newInternalNode;
+	// copy up leftmost key on new node up to the root
+	newInternalNode->keyArray[0] = newNode->keyArray[0];
 	
 }
 
