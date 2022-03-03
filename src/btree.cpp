@@ -82,12 +82,19 @@ void BTreeIndex::endScan()
 {
 	if (scanExecuting == false)
 	{
-		throw Scan NotInitialException();
+		// throws ScanNotInitializedException() when called before a successful startScan call.
+		throw ScanNotInitializedException();
 	}
-	else
-	{
-		scanExecuting == false;
-		bufMgr->unPinPage(file, currentPageNum, false);
-	}
+	// terminates the current scan
+	scanExecuting = false;
+	
+	// unpins all the pages that have been pinned for the purpose of the scan
+	bufMgr->unPinPage(file, currentPageNum, false);
+
+	// reset scan data to NULL
+	currentPageData = nullptr;
+	PageId nullPage = -1;
+	currentPageNum = nullPage;
+	nextEntry = -1;
 }
 }
