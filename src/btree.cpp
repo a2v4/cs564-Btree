@@ -122,10 +122,15 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 
 void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
 	if(leafOccupancy == INTARRAYLEAFSIZE) {
-		splitChild(currNode, pageid, pair);
-	} else {
+		PageId sibling = splitChild(currNode, pageid, pair);
+		currNode->rightSibPageNo = sibling;
+	}
+	else
+	{
 		//insert into available page in node
-		
+		currNode->keyArray[leafOccupancy] = pair.key;
+		currNode->ridArray[leafOccupancy] = pair.rid;
+		leafOccupancy++;
 	}
 }
 
@@ -135,7 +140,7 @@ void BTreeIndex::insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKey
 }
 
 
-void BTreeIndex::splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
+PageId BTreeIndex::splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
 
 }
 
