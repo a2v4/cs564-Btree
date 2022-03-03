@@ -122,8 +122,8 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 
 void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
 	if(leafOccupancy == INTARRAYLEAFSIZE) {
-		PageId sibling = splitChild(currNode, pageid, pair);
-		currNode->rightSibPageNo = sibling;
+		splitChild(currNode, pageid, pair);
+		currNode->rightSibPageNo = pageid;
 	}
 	else
 	{
@@ -140,10 +140,31 @@ void BTreeIndex::insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKey
 }
 
 
-PageId BTreeIndex::splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
+void BTreeIndex::splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
+	//create new leafNode
+	LeafNodeInt *newNode;
+	//copy half the keys from previous node to this one	
+	newNode->keyArray[0] = pair.key;
+	newNode->ridArray[0] = pair.rid;
+	int sizeOfNewNode = 1;
+	for (int i = leafOccupancy - 1; i > leafOccupancy / 2; i--)
+	{
+		newNode->keyArray[sizeOfNewNode] = currNode->keyArray[i];
+		newNode->ridArray[sizeOfNewNode] = currNode->ridArray[i];
+		sizeOfNewNode++;
+	}
 
+	// connect currNode to new Node
+	currNode->rightSibPageNo = pageid;
+
+	//create new root
+	
+
+	//copy up leftmost key on new node up to the root
+
+
+	
 }
-
 
 // -----------------------------------------------------------------------------
 // BTreeIndex::startScan
