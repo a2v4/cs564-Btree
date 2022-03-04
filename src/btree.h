@@ -304,6 +304,7 @@ class BTreeIndex {
    * @param bufMgrIn						Buffer Manager Instance
    * @param attrByteOffset			Offset of attribute, over which index is to be built, in the record
    * @param attrType						Datatype of attribute over which index is built
+   * @throws  BadIndexInfoException     If the index file already exists for the corresponding attribute, but values in metapage(relationName, attribute byte offset, attribute type etc.) do not match with values received through constructor parameters.
    */
 	BTreeIndex(const std::string & relationName, std::string & outIndexName,
 						BufMgr *bufMgrIn,	const int attrByteOffset,	const Datatype attrType);
@@ -329,14 +330,22 @@ class BTreeIndex {
 	**/
 	void insertEntry(const void* key, const RecordId rid);
 
-  
   void insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
 
+<<<<<<< HEAD
   void insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
 
+<<<<<<< HEAD
   void splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
 
   void splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
+=======
+  void splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
+=======
+  void insertToNonLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
+
+>>>>>>> main
+>>>>>>> 502025e95d6c663f2792f8920845f2a916bf2705
   /**
    * Begin a filtered scan of the index.  For instance, if the method is called
    * using ("a",GT,"d",LTE) then we should seek all entries with a value
@@ -352,8 +361,7 @@ class BTreeIndex {
    * @throws  BadScanrangeException If lowVal > highval
    * @throws  NoSuchKeyFoundException If there is no key in the B+ tree that satisfies the scan criteria.
    **/
-  void startScan(const void* lowVal, const Operator lowOp, const void* highVal, const Operator highOp);
-
+  void startScan(const void *lowVal, const Operator lowOp, const void *highVal, const Operator highOp);
 
   /**
 	 * Fetch the record id of the next index entry that matches the scan.
@@ -364,13 +372,11 @@ class BTreeIndex {
 	**/
 	void scanNext(RecordId& outRid);  // returned record id
 
-
   /**
-	 * Terminate the current scan. Unpin any pinned pages. Reset scan specific variables.
-	 * @throws ScanNotInitializedException If no scan has been initialized.
-	**/
-	void endScan();
-	
+   * Terminate the current scan. Unpin any pinned pages. Reset scan specific variables.
+   * @throws ScanNotInitializedException If no scan has been initialized.
+   **/
+  void endScan();
 };
 
 }
