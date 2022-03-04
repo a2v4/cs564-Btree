@@ -330,24 +330,26 @@ class BTreeIndex {
 	**/
 	void insertEntry(const void* key, const RecordId rid);
 
+  void insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
+
+  void insertToNonLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
 
   /**
-	 * Begin a filtered scan of the index.  For instance, if the method is called 
-	 * using ("a",GT,"d",LTE) then we should seek all entries with a value 
-	 * greater than "a" and less than or equal to "d".
-	 * If another scan is already executing, that needs to be ended here.
-	 * Set up all the variables for scan. Start from root to find out the leaf page that contains the first RecordID
-	 * that satisfies the scan parameters. Keep that page pinned in the buffer pool.
+   * Begin a filtered scan of the index.  For instance, if the method is called
+   * using ("a",GT,"d",LTE) then we should seek all entries with a value
+   * greater than "a" and less than or equal to "d".
+   * If another scan is already executing, that needs to be ended here.
+   * Set up all the variables for scan. Start from root to find out the leaf page that contains the first RecordID
+   * that satisfies the scan parameters. Keep that page pinned in the buffer pool.
    * @param lowVal	Low value of range, pointer to integer / double / char string
    * @param lowOp		Low operator (GT/GTE)
    * @param highVal	High value of range, pointer to integer / double / char string
    * @param highOp	High operator (LT/LTE)
-   * @throws  BadOpcodesException If lowOp and highOp do not contain one of their their expected values 
+   * @throws  BadOpcodesException If lowOp and highOp do not contain one of their their expected values
    * @throws  BadScanrangeException If lowVal > highval
-	 * @throws  NoSuchKeyFoundException If there is no key in the B+ tree that satisfies the scan criteria.
-	**/
-	void startScan(const void* lowVal, const Operator lowOp, const void* highVal, const Operator highOp);
-
+   * @throws  NoSuchKeyFoundException If there is no key in the B+ tree that satisfies the scan criteria.
+   **/
+  void startScan(const void *lowVal, const Operator lowOp, const void *highVal, const Operator highOp);
 
   /**
 	 * Fetch the record id of the next index entry that matches the scan.
@@ -358,13 +360,11 @@ class BTreeIndex {
 	**/
 	void scanNext(RecordId& outRid);  // returned record id
 
-
   /**
-	 * Terminate the current scan. Unpin any pinned pages. Reset scan specific variables.
-	 * @throws ScanNotInitializedException If no scan has been initialized.
-	**/
-	void endScan();
-	
+   * Terminate the current scan. Unpin any pinned pages. Reset scan specific variables.
+   * @throws ScanNotInitializedException If no scan has been initialized.
+   **/
+  void endScan();
 };
 
 }
