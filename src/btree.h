@@ -332,20 +332,14 @@ class BTreeIndex {
 
   void insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
 
-<<<<<<< HEAD
   void insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
 
-<<<<<<< HEAD
   void splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
 
   void splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
-=======
-  void splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
-=======
-  void insertToNonLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
 
->>>>>>> main
->>>>>>> 502025e95d6c663f2792f8920845f2a916bf2705
+
+
   /**
    * Begin a filtered scan of the index.  For instance, if the method is called
    * using ("a",GT,"d",LTE) then we should seek all entries with a value
