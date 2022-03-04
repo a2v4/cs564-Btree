@@ -25,56 +25,91 @@ namespace badgerdb {
 // BTreeIndex::BTreeIndex -- Constructor
 // -----------------------------------------------------------------------------
 
-BTreeIndex::BTreeIndex(const std::string & relationName,
-		std::string & outIndexName,
-		BufMgr *bufMgrIn,
-		const int attrByteOffset,
-		const Datatype attrType)
+BTreeIndex::BTreeIndex(const std::string &relationName,
+					   std::string &outIndexName,
+					   BufMgr *bufMgrIn,
+					   const int attrByteOffset,
+					   const Datatype attrType)
 {
 	std::ostringstream idxStr;
 	idxStr << relationName << '.' << attrByteOffset;
 	outIndexName = idxStr.str();
 
+	// initialize
+	this->bufMgr = bufMgrIn;
+	this->attrByteOffset = attrByteOffset;
+	this->attributeType = attributeType;
+
+	this->currentPageData = new Page;
+	this->currentPageNum = (PageId)-1;
+	this->rootPageNum = (PageId)-1;
+	this->headerPageNum = (PageId)-1;
+	this->scanExecuting = false;
+	this->nextEntry = -1;
+
 	// Check to see if the corresponding index file exists. If so, open the file.
 	// If not, create it
-	try
+	if (BlobFile::exists(outIndexName) == true)
 	{
-		BlobFile::open(relationName);
+		// File found, so use it
+		file = new BlobFile(outIndexName, false);
+		headerPageNum = file->getFirstPageNo();
+		// init page to store in
+		Page *headerPage;
+		// get page by pageNum and store in headerPage, which should be a META INFO page
+		bufMgr->readPage(file, headerPageNum, headerPage);
+		IndexMetaInfo *metaInfoPage = (IndexMetaInfo *)headerPage;
+		rootPageNum = metaInfoPage->rootPageNo;
+		// unpin page, and its not dirty because we only READ from it
+		bufMgr->unPinPage(file, headerPageNum, false);
 	}
-	catch (FileNotFoundException &e)
+	else
 	{
-		 file = new BlobFile(outIndexName, true);
-		 Page *headerPage;
-		 bufMgrIn->allocPage(file, headerPageNum, headerPage);
-		 //insert metadata in header page
-		 IndexMetaInfo *metadata = (IndexMetaInfo *)headerPage;
+		// File not found, so create it
+		file = new BlobFile(outIndexName, true);
+		Page *headerPage;
+		bufMgrIn->allocPage(file, headerPageNum, headerPage);
+		// insert metadata in header page
+		IndexMetaInfo *metaInfoPage = (IndexMetaInfo *)headerPage;
 
-		 strcpy(metadata->relationName, relationName.c_str());
-		 metadata->attrByteOffset = attrByteOffset;
-		 metadata->attrType = attrType;
-		 metadata->rootPageNo = rootPageNum;
+		// copy relationName into the metaInfoPage
+		strcpy(metaInfoPage->relationName, relationName.c_str());
+		metaInfoPage->attrByteOffset = attrByteOffset;
+		metaInfoPage->attrType = attrType;
+		metaInfoPage->rootPageNo = rootPageNum;
+		// save meta info in the headerPage
+		memcpy(headerPage, metaInfoPage, sizeof(metaInfoPage));
+		// unpin page, and mark dirty because we wrote the meta info to the header page
+		bufMgr->unPinPage(file, headerPageNum, true);
 
-		 Page *rootPage;
-		 bufMgrIn->allocPage(file, rootPageNum, rootPage);
-		 
-		 //initialize root
-		 LeafNodeInt *root = (LeafNodeInt *)rootPage;
+		// init root page for use
+		Page *rootPage;
+		bufMgrIn->allocPage(file, rootPageNum, rootPage);
 
-		 // insert entries for every tuple in the base relation using FileScan class.
-		 FileScan * scanner = new FileScan(relationName, bufMgrIn);
-		 std::string currRecord = scanner->getRecord();
-		 RecordId recordId;
-		 while (true){
-			try {
-					scanner->scanNext(recordId);
-					const char *key = currRecord.c_str() + attrByteOffset;
-					insertEntry(key, recordId);
-				} catch (EndOfFileException &e) {
-					break;
-				}
+		// initialize root
+		LeafNodeInt *root = (LeafNodeInt *)rootPage;
+
+		// insert entries for every tuple in the base relation using FileScan class.
+		FileScan *scanner = new FileScan(relationName, bufMgrIn);
+		std::string currRecord = scanner->getRecord();
+		RecordId recordId;
+		while (true)
+		{
+			try
+			{
+				scanner->scanNext(recordId);
+				const char *key = currRecord.c_str() + attrByteOffset;
+				insertEntry(key, recordId);
+			}
+			catch (EndOfFileException &e)
+			{
+				break;
 			}
 		}
-    }  
+		// unpin page, and its not dirty because we only READ from it
+		bufMgr->unPinPage(file, rootPageNum, false);
+	}
+}
 
 // -----------------------------------------------------------------------------
 // BTreeIndex::~BTreeIndex -- destructor
