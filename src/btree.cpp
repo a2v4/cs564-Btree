@@ -25,11 +25,11 @@ namespace badgerdb {
 // BTreeIndex::BTreeIndex -- Constructor
 // -----------------------------------------------------------------------------
 
-BTreeIndex::BTreeIndex(const std::string &relationName,
-					   std::string &outIndexName,
-					   BufMgr *bufMgrIn,
-					   const int attrByteOffset,
-					   const Datatype attrType)
+BTreeIndex::BTreeIndex(const std::string & relationName,
+		std::string & outIndexName,
+		BufMgr *bufMgrIn,
+		const int attrByteOffset,
+		const Datatype attrType)
 {
 	std::ostringstream idxStr;
 	idxStr << relationName << '.' << attrByteOffset;
