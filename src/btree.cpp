@@ -59,7 +59,10 @@ BTreeIndex::BTreeIndex(const std::string &relationName,
 
 		// initialize root
 		LeafNodeInt *root = (LeafNodeInt *)rootPage;
-
+		currentPageNum = rootPageNum;
+		currentPageData = rootPage;
+		leafOccupancy = 0;
+		
 		// insert entries for every tuple in the base relation using FileScan class.
 		FileScan *scanner = new FileScan(relationName, bufMgrIn);
 		std::string currRecord = scanner->getRecord();
