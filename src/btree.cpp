@@ -105,7 +105,6 @@ BTreeIndex::~BTreeIndex() {
 
 void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 {
-<<<<<<< HEAD
 	
 	RIDKeyPair<int> pair;
 	pair.set(rid, (*((int *)key)));
@@ -168,29 +167,6 @@ void BTreeIndex::splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int
 	
 }
 
-=======
-
-	Page *root;
-	bufMgr->readPage(file, rootPageNum, root);
-
-	// If leaf node, make helper for insert in leaf Node
-	// compare root page no to starting root page number, if true, then leaf else non-leaf node
-
-	RIDKeyPair<int> pair;
-	pair.set(rid, (*((int *)key)));
-}
-
-void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
-{
-
-}
-
-void BTreeIndex::insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
-{
-
-}
-
->>>>>>> main
 // -----------------------------------------------------------------------------
 // BTreeIndex::startScan
 // -----------------------------------------------------------------------------
