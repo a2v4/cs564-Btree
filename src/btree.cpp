@@ -105,48 +105,51 @@ BTreeIndex::~BTreeIndex() {
 
 void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 {
-	
+
 	RIDKeyPair<int> pair;
 	pair.set(rid, (*((int *)key)));
-	
+
 	// compare page number equal to starting root page number, if true, then leaf else non-leaf node
-	//if leaf node, make helper for insert in leaf Node
-	if(currentPageNum == rootPageNum) {
-		//leafNode
+	// if leaf node, make helper for insert in leaf Node
+	if (currentPageNum == rootPageNum)
+	{
+		// leafNode
 		LeafNodeInt *currNode;
 		insertToLeaf(currNode, currentPageNum, pair);
-	} else {
-		//non-leaf node
+	}
+	else
+	{
+		// non-leaf node
 		NonLeafNodeInt *currNode;
 		insertToNonLeaf(currNode, currentPageNum, pair);
 	}
 }
 
-
-void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
-	if(leafOccupancy == INTARRAYLEAFSIZE) {
+void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
+{
+	if (leafOccupancy == INTARRAYLEAFSIZE)
+	{
 		splitChild(currNode, pageid, pair);
 		currNode->rightSibPageNo = pageid;
 	}
 	else
 	{
-		//insert into available page in node
+		// insert into available page in node
 		currNode->keyArray[leafOccupancy] = pair.key;
 		currNode->ridArray[leafOccupancy] = pair.rid;
 		leafOccupancy++;
 	}
 }
 
-
-void BTreeIndex::insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
-
+void BTreeIndex::insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
+{
 }
 
-
-void BTreeIndex::splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
-	//create new leafNode
+void BTreeIndex::splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
+{
+	// create new leafNode
 	LeafNodeInt *newNode;
-	//copy half the keys from previous node to this one	
+	// copy half the keys from previous node to this one
 	newNode->keyArray[0] = pair.key;
 	newNode->ridArray[0] = pair.rid;
 	int sizeOfNewNode = 1;
@@ -160,11 +163,10 @@ void BTreeIndex::splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int
 	// connect currNode to new Node
 	currNode->rightSibPageNo = pageid;
 
-	//create new root which will be a Non leaf node
+	// create new root which will be a Non leaf node
 	NonLeafNodeInt *newInternalNode;
 	// copy up leftmost key on new node up to the root
 	newInternalNode->keyArray[0] = newNode->keyArray[0];
-	
 }
 
 // -----------------------------------------------------------------------------
