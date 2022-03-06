@@ -224,7 +224,7 @@ void BTreeIndex::splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPai
 	newNode->keyArray[0] = pair.key;
 	
 	int sizeOfNewNode = 1;
-	for (int i = nodeOccupancy - 1; i > nodeOccupancy / 2; i--)
+	for (int i = nodeOccupancy / 2; i < INTARRAYNONLEAFSIZE + 1; i++)
 	{
 		newNode->keyArray[sizeOfNewNode] = currNode->keyArray[i];
 		newNode->pageNoArray[sizeOfNewNode] = currNode->pageNoArray[i];
