@@ -18,7 +18,7 @@
 
 
 //#define DEBUG
-
+using namespace std;
 namespace badgerdb {
 
 // -----------------------------------------------------------------------------
@@ -168,8 +168,16 @@ void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<i
 	else
 	{
 		// insert into available page in node
-		currNode->keyArray[leafOccupancy] = pair.key;
-		currNode->ridArray[leafOccupancy] = pair.rid;
+		int i = 0;
+		while(i < leafOccupancy && currNode->keyArray[i] < pair.key) {
+			i++;
+		}
+		//shift all right values one place to the right
+		for(int j = i + 1; j < INTARRAYLEAFSIZE; j++){
+			currNode->keyArray[j] = currNode->keyArray[j - 1];
+		}
+		currNode->keyArray[i] = pair.key;
+		currNode->ridArray[i] = pair.rid;
 		leafOccupancy++;
 	}
 	currentPageNum = pageid;
@@ -190,17 +198,16 @@ void BTreeIndex::splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int>
 	//create new leafNode
 	LeafNodeInt *newNode;
 	// copy half the keys from previous node to this one
-	newNode->keyArray[0] = pair.key;
-	newNode->ridArray[0] = pair.rid;
-	int sizeOfNewNode = 1;
+	
+	int sizeOfNewNode = 0;
 	for (int i = leafOccupancy / 2; i < INTARRAYLEAFSIZE; i++)
 	{
 		newNode->keyArray[sizeOfNewNode] = currNode->keyArray[i];
 		newNode->ridArray[sizeOfNewNode] = currNode->ridArray[i];
-		
 		sizeOfNewNode++;
 	}
-
+	newNode->keyArray[sizeOfNewNode] = pair.key;
+	newNode->ridArray[sizeOfNewNode] = pair.rid;
 
 	// create new root which will be a Non leaf node
 	NonLeafNodeInt *newInternalNode;
@@ -213,6 +220,8 @@ void BTreeIndex::splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int>
 
 	//connect curr node to new leaf node
 	currNode->rightSibPageNo = newPageId;
+	
+	currentPageNum = newPageId; //<--- Not sure about this
 
 	// copy up leftmost key on new node up to the root
 	insertToNonLeaf(newInternalNode, newPageId, pair);
@@ -222,9 +231,8 @@ void BTreeIndex::splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPai
 	//create new non leafNode
 	NonLeafNodeInt *newNode;
 	//copy half the keys from previous node to this one	
-	newNode->keyArray[0] = pair.key;
 	
-	int sizeOfNewNode = 1;
+	int sizeOfNewNode = 0;
 	for (int i = nodeOccupancy / 2; i < INTARRAYNONLEAFSIZE + 1; i++)
 	{
 		newNode->keyArray[sizeOfNewNode] = currNode->keyArray[i];
@@ -232,6 +240,8 @@ void BTreeIndex::splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPai
 		sizeOfNewNode++;
 	}
 
+	newNode->keyArray[sizeOfNewNode] = pair.key;
+	
 	//create new root which will be a Non leaf node
 	NonLeafNodeInt *newInternalNode;
 	nodeOccupancy = 0;
@@ -241,6 +251,9 @@ void BTreeIndex::splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPai
 	File *newFile;
 	PageId newPageId;
 	bufMgr->allocPage(newFile, newPageId, newPage);
+
+	currentPageNum = newPageId; //<--- Not sure about this
+
 	// copy up leftmost key on new node up to the root
 	insertToNonLeaf(newInternalNode, newPageId, pair);
 }
