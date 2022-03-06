@@ -372,6 +372,5 @@ void BTreeIndex::endScan()
 	currentPageNum = nullPage;
 	nextEntry = -1;
 }
-
 }
 
