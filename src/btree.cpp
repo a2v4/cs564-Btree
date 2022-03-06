@@ -125,6 +125,32 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 	}
 }
 
+
+void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
+	if(leafOccupancy == INTARRAYLEAFSIZE) {
+		splitLeaf(currNode, pageid, pair);
+	}
+	else
+	{
+		//insert into available page in node
+		currNode->keyArray[leafOccupancy] = pair.key;
+		currNode->ridArray[leafOccupancy] = pair.rid;
+		leafOccupancy++;
+	}
+	currentPageNum = pageid;
+}
+
+
+void BTreeIndex::insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
+	if(nodeOccupancy == INTARRAYNONLEAFSIZE) {
+		splitNonLeaf(currNode, pageid, pair);
+	} else {
+		currNode->keyArray[leafOccupancy] = pair.key;
+		nodeOccupancy++;
+	}
+}
+
+
 void BTreeIndex::splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
 	//create new leafNode
 	LeafNodeInt *newNode;
@@ -132,23 +158,28 @@ void BTreeIndex::splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int>
 	newNode->keyArray[0] = pair.key;
 	newNode->ridArray[0] = pair.rid;
 	int sizeOfNewNode = 1;
-	for (int i = leafOccupancy - 1; i > leafOccupancy / 2; i--)
+	for (int i = leafOccupancy / 2; i < INTARRAYLEAFSIZE; i++)
 	{
 		newNode->keyArray[sizeOfNewNode] = currNode->keyArray[i];
 		newNode->ridArray[sizeOfNewNode] = currNode->ridArray[i];
+		
 		sizeOfNewNode++;
 	}
 
-	// connect currNode to new Node
-	currNode->rightSibPageNo = pageid;
+	//connect curr node to new leaf node
+	currNode->rightSibPageNo = newPageId;
 
 	//create new root which will be a Non leaf node
 	NonLeafNodeInt *newInternalNode;
 	nodeOccupancy = 0;
-	// copy up leftmost key on new node up to the root
-	// newInternalNode->keyArray[0] = newNode->keyArray[0];
+	//alloc new page for new non leaf node
+	Page *newPage;
+	File *newFile;
+	PageId newPageId;
+	bufMgr->allocPage(newFile, newPageId, newPage);
 
-	insertToNonLeaf(newInternalNode, pageid, pair);
+	// copy up leftmost key on new node up to the root
+	insertToNonLeaf(newInternalNode, newPageId, pair);
 }
 
 void BTreeIndex::splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
@@ -168,34 +199,14 @@ void BTreeIndex::splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPai
 	//create new root which will be a Non leaf node
 	NonLeafNodeInt *newInternalNode;
 	nodeOccupancy = 0;
-	
+
+	//alloc new page for new non leaf node
+	Page *newPage;
+	File *newFile;
+	PageId newPageId;
+	bufMgr->allocPage(newFile, newPageId, newPage);
 	// copy up leftmost key on new node up to the root
-	insertToNonLeaf(newInternalNode, pageid, pair);
-}
-
-
-void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
-	if(leafOccupancy == INTARRAYLEAFSIZE) {
-		splitLeaf(currNode, pageid, pair);
-		currNode->rightSibPageNo = pageid;
-	}
-	else
-	{
-		//insert into available page in node
-		currNode->keyArray[leafOccupancy] = pair.key;
-		currNode->ridArray[leafOccupancy] = pair.rid;
-		leafOccupancy++;
-	}
-}
-
-
-void BTreeIndex::insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
-	if(nodeOccupancy == INTARRAYNONLEAFSIZE) {
-		splitNonLeaf(currNode, pageid, pair);
-	} else {
-		currNode->keyArray[leafOccupancy] = pair.key;
-		nodeOccupancy++;
-	}
+	insertToNonLeaf(newInternalNode, newPageId, pair);
 }
 
 // -----------------------------------------------------------------------------

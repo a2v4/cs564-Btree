@@ -330,14 +330,13 @@ class BTreeIndex {
 	**/
 	void insertEntry(const void* key, const RecordId rid);
 
-  void insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
-
-  void insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
-
   void splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
 
   void splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
 
+  void insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
+
+  void insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
 
 
   /**
