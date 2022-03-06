@@ -301,10 +301,16 @@ void BTreeIndex::startScan(const void *lowValParm,
 // -----------------------------------------------------------------------------
 // BTreeIndex::scanNext
 // -----------------------------------------------------------------------------
-
+/**
+ * Fetch the record id of the next index entry that matches the scan.
+ * Return the next record from current page being scanned. If current page has been scanned to its entirety, move on to the right sibling of current page, if any exists, to start scanning that page. Make sure to unpin any pages that are no longer required.
+ * @param outRid	RecordId of next record found that satisfies the scan criteria returned in this
+ * @throws ScanNotInitializedException If no scan has been initialized.
+ * @throws IndexScanCompletedException If no more records, satisfying the scan criteria, are left to be scanned.
+ **/
 void BTreeIndex::scanNext(RecordId &outRid)
 {
-	if (!scanExecuting)
+	if (scanExecuting == false)
 	{
 		throw ScanNotInitializedException();
 	}
