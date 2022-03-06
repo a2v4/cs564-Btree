@@ -18,7 +18,7 @@
 
 
 //#define DEBUG
-using namespace std;
+
 namespace badgerdb {
 
 // -----------------------------------------------------------------------------
@@ -88,10 +88,7 @@ BTreeIndex::BTreeIndex(const std::string &relationName,
 
 		// initialize root
 		LeafNodeInt *root = (LeafNodeInt *)rootPage;
-		currentPageNum = rootPageNum;
-		currentPageData = rootPage;
-		leafOccupancy = 0;
-		
+
 		// insert entries for every tuple in the base relation using FileScan class.
 		FileScan *scanner = new FileScan(relationName, bufMgrIn);
 		std::string currRecord = scanner->getRecord();
@@ -141,6 +138,7 @@ BTreeIndex::~BTreeIndex()
 
 void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 {
+
 	RIDKeyPair<int> pair;
 	pair.set(rid, (*((int *)key)));
 
@@ -160,10 +158,12 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 	}
 }
 
-
-void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
-	if(leafOccupancy == INTARRAYLEAFSIZE) {
-		splitLeaf(currNode, pageid, pair);
+void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
+{
+	if (leafOccupancy == INTARRAYLEAFSIZE)
+	{
+		splitChild(currNode, pageid, pair);
+		currNode->rightSibPageNo = pageid;
 	}
 	else
 	{
@@ -204,10 +204,30 @@ void BTreeIndex::insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int ke
 	}
 }
 
-
-void BTreeIndex::splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
-	//create new leafNode
+void BTreeIndex::splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
+{
+	// create new leafNode
 	LeafNodeInt *newNode;
+<<<<<<< HEAD
+	// copy half the keys from previous node to this one
+	newNode->keyArray[0] = pair.key;
+	newNode->ridArray[0] = pair.rid;
+	int sizeOfNewNode = 1;
+	for (int i = leafOccupancy - 1; i > leafOccupancy / 2; i--)
+	{
+		newNode->keyArray[sizeOfNewNode] = currNode->keyArray[i];
+		newNode->ridArray[sizeOfNewNode] = currNode->ridArray[i];
+		sizeOfNewNode++;
+	}
+
+	// connect currNode to new Node
+	currNode->rightSibPageNo = pageid;
+
+	// create new root which will be a Non leaf node
+	NonLeafNodeInt *newInternalNode;
+	// copy up leftmost key on new node up to the root
+	newInternalNode->keyArray[0] = newNode->keyArray[0];
+=======
 
 	// copy half the keys from previous node to this one and insert new one in ascending order
 	bool insertedNewEntry = false;
@@ -278,7 +298,12 @@ void BTreeIndex::splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key) 
 	bufMgr->allocPage(newFile, newPageId, newPage);
 	int leftmostKey = newNode->keyArray[0];
 	// copy up leftmost key on new node up to the root
+<<<<<<< HEAD
 	insertToNonLeaf(newInternalNode, newPageId, leftmostKey);
+=======
+	insertToNonLeaf(newInternalNode, newPageId, key);
+>>>>>>> 72ba7b186dec06e5a4b5d5f9bd44b526e5d19344
+>>>>>>> 8a96073512ebaa1e48ec7ce1795d0648a05d51c1
 }
 
 // -----------------------------------------------------------------------------
@@ -359,6 +384,23 @@ void BTreeIndex::startScan(const void *lowValParm,
     		if((lowOpParm == GTE && highOpParm == LTE) && (key >= lowOpParm && key <= highOpParm))  {
     			scanExecuting = true;
     			loop = 1;
+
+    			nextEntry = i;
+    			break;
+    		} else if ((lowOpParm == GTE && highOpParm == LT) && (key >= lowOpParm && key < highOpParm)){
+    			scanExecuting = true;
+    			loop = 1;
+    			nextEntry = i;
+    			break;			
+    		} else if ((lowOpParm == GT && highOpParm == LTE) && (key > lowOpParm && key <= highOpParm)){
+    			scanExecuting = true;
+    			loop = 1;
+    			nextEntry = i;
+    			break;		
+    		} else if ((lowOpParm == GT && highOpParn == LT) && (key >= lowOpParm && key <= highOpParm)){
+    			scanExecuting = true;
+    			loop = 1;
+    			nextEntry = i;
     			break;
     		} else if ((lowOpParm = GTE && highOpParm == LT) && (key >= lowOpParm && key < highOpParm)){
     			scanExecuting = true;
@@ -405,6 +447,11 @@ void BTreeIndex::startScan(const void *lowValParm,
 }
 // -----------------------------------------------------------------------------
 // BTreeIndex::scanNext
+//	 * Fetch the record id of the next index entry that matches the scan.
+//	 * Return the next record from current page being scanned. If current page has been scanned to its entirety, 
+//   move on to the right sibling of current page, if any exists, to start scanning that page. 
+//   Make sure to unpin any pages that are no longer required.
+//   * @param outRid	RecordId of next record found that satisfies the scan criteria returned in this
 // -----------------------------------------------------------------------------
 
 void BTreeIndex::scanNext(RecordId& outRid) 
@@ -415,9 +462,40 @@ void BTreeIndex::scanNext(RecordId& outRid)
   	bufMgr->readPage(file, currentPageNum, currentPageData);
   	LeafNodeInt *currentNode = (LeafNodeInt *) currentPageData;
 
+<<<<<<< HEAD
+  	if (nextEntry == leafOccupancy) {
+  		bufMgr->unPinPage(file,currentPageNum,false);
+  		if(currentNode->rightSibPageNo == 0) {
+  			throw IndexScanCompletedException();
+  		}
+  		else {
+  		currentPageNum = currrentNode->rightSibPageNo;
+  		bufMgr->readPage(file,currentPageNum, currentPageData)
+  		currentNode = (LeafNodeInt *) currentPageData;
+  		nextEntry = 0;
+  		}
+  	}
+
+  	int key = currentNode->keyArray[nextEntry];
+  	if((lowOpParm == GTE && highOpParm == LTE) && (key >= lowOpParm && key <= highOpParm))  {
+    	outRid = currentNode->keyArray[nextEntry];
+    } else if ((lowOpParm == GTE && highOpParm == LT) && (key >= lowOpParm && key < highOpParm)){
+    	outRid = currentNode->keyArray[nextEntry];		
+    } else if ((lowOpParm == GT && highOpParm == LTE) && (key > lowOpParm && key <= highOpParm)){
+    	outRid = currentNode->keyArray[nextEntry];	
+    } else if ((lowOpParm == GT && highOpParn == LT) && (key >= lowOpParm && key <= highOpParm)){
+    	outRid = currentNode->keyArray[nextEntry];		
+    } else {
+    	throw IndexScanCompletedException();
+    }
+
   	if(currentNode->rightSibPageNo == 0){
+
 		throw index_scan_completed_exception();
-	}
+	  }
+
+    nextEntry++;
+
 }
 
 // -----------------------------------------------------------------------------
@@ -442,6 +520,8 @@ void BTreeIndex::endScan()
 	PageId nullPage = -1;
 	currentPageNum = nullPage;
 	nextEntry = -1;
+
 }
+
 
 
