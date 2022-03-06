@@ -35,25 +35,54 @@ BTreeIndex::BTreeIndex(const std::string &relationName,
 	idxStr << relationName << '.' << attrByteOffset;
 	outIndexName = idxStr.str();
 
+	// initialize
+	this->bufMgr = bufMgrIn;
+	this->attrByteOffset = attrByteOffset;
+	this->attributeType = attributeType;
+
+	this->currentPageData = new Page;
+	this->currentPageNum = (PageId)-1;
+	this->rootPageNum = (PageId)-1;
+	this->headerPageNum = (PageId)-1;
+	this->scanExecuting = false;
+	this->nextEntry = -1;
+
 	// Check to see if the corresponding index file exists. If so, open the file.
 	// If not, create it
-	try
+	if (BlobFile::exists(outIndexName) == true)
 	{
-		BlobFile::open(relationName);
+		// File found, so use it
+		file = new BlobFile(outIndexName, false);
+		headerPageNum = file->getFirstPageNo();
+		// init page to store in
+		Page *headerPage;
+		// get page by pageNum and store in headerPage, which should be a META INFO page
+		bufMgr->readPage(file, headerPageNum, headerPage);
+		IndexMetaInfo *metaInfoPage = (IndexMetaInfo *)headerPage;
+		rootPageNum = metaInfoPage->rootPageNo;
+		// unpin page, and its not dirty because we only READ from it
+		bufMgr->unPinPage(file, headerPageNum, false);
 	}
-	catch (FileNotFoundException &e)
+	else
 	{
+		// File not found, so create it
 		file = new BlobFile(outIndexName, true);
 		Page *headerPage;
 		bufMgrIn->allocPage(file, headerPageNum, headerPage);
 		// insert metadata in header page
-		IndexMetaInfo *metadata = (IndexMetaInfo *)headerPage;
+		IndexMetaInfo *metaInfoPage = (IndexMetaInfo *)headerPage;
 
-		strcpy(metadata->relationName, relationName.c_str());
-		metadata->attrByteOffset = attrByteOffset;
-		metadata->attrType = attrType;
-		metadata->rootPageNo = rootPageNum;
+		// copy relationName into the metaInfoPage
+		strcpy(metaInfoPage->relationName, relationName.c_str());
+		metaInfoPage->attrByteOffset = attrByteOffset;
+		metaInfoPage->attrType = attrType;
+		metaInfoPage->rootPageNo = rootPageNum;
+		// save meta info in the headerPage
+		memcpy(headerPage, metaInfoPage, sizeof(metaInfoPage));
+		// unpin page, and mark dirty because we wrote the meta info to the header page
+		bufMgr->unPinPage(file, headerPageNum, true);
 
+		// init root page for use
 		Page *rootPage;
 		bufMgrIn->allocPage(file, rootPageNum, rootPage);
 
@@ -77,6 +106,8 @@ BTreeIndex::BTreeIndex(const std::string &relationName,
 				break;
 			}
 		}
+		// unpin page, and its not dirty because we only READ from it
+		bufMgr->unPinPage(file, rootPageNum, false);
 	}
 }
 
@@ -84,11 +115,13 @@ BTreeIndex::BTreeIndex(const std::string &relationName,
 // BTreeIndex::~BTreeIndex -- destructor
 // -----------------------------------------------------------------------------
 
-BTreeIndex::~BTreeIndex() {
+BTreeIndex::~BTreeIndex()
+{
 	scanExecuting = false;
-  	bufMgr->flushFile(file);
-  	delete file;
+	bufMgr->flushFile(file);
+	delete file;
 }
+
 
 // -----------------------------------------------------------------------------
 // BTreeIndex::insertEntry
@@ -193,7 +226,76 @@ void BTreeIndex::startScan(const void *lowValParm,
 						   const void *highValParm,
 						   const Operator highOpParm)
 {
+	// end current scan and get ready to start a new scan
+	if (scanExecuting == true) {
+		endScan();
+	}
+	// BadOpcodesException takes higher precedence over BadScanrangeException
+	// only support GT and GTE here
+	if (lowOpParm != GT || lowOpParm != GTE) {
+		throw BadOpcodesException();
+	}
+	// only support LT and LTE here
+	if (highOpParm != LT || highOpParm != LTE) {
+		throw BadOpcodesException();
+	}
 
+	// If lowValue > highValue, throw the exception BadScanrangeException.
+	if (lowOpParm > highOpParm) {
+		throw BadScanrangeException();
+	}
+
+	// Both the high and low values are in a binary form, i.e., for integer
+	// keys, these point to the address of an integer.
+
+	// Start from root to find out the leaf page that contains the first RecordID
+	// that satisfies the scan parameters. Keep that page pinned in the buffer pool.
+	//currentPageNum = rootPageNum;
+	//bufMgr->readPage(file, rootPageNum, currentPageData);
+	//bufMgr->unPinPage(file, currentPageNum, true);
+	scanExecuting = true;
+    bufMgr->readPage(file, rootPageNum, currentPageData);
+    currentPageNum = rootPageNum;
+    NonLeafNodeInt* currentNode = (NonLeafNodeInt *) currentPageData;
+
+    while(currentNode-> level != 1){
+    	//how to find the beginning of the range?
+    	//(currentNode->keyArray[] > lowValParm  ?
+    	PageID nextNodePageNum = currentNode->pageNoArray[first page?];
+    	bufMgr->readPage(file, nextNodePageNum, currentPageData);
+    	bufMgr->unPinPage(file, currentPageNum, false);
+    	currentPageNum = nextNodePageNo;
+    	
+    	//go to next node
+    	currentNode = (NoneLeafNodeInt*) currentPageData;
+    	
+    }
+    
+    //while() looping until found
+    	LeafNodeInt* currentNode = (LeafNodeInt*) currentPageData;
+    	for(int i = 0; i < leafOccupancy; i++) {
+    		if ((highOp == LT and key >= highOpParm) or (highOp == LTE and key >highOpParm)){
+    			bufMgr->unPinPage(file, currentPageNum, false);
+    			throw NoSuchKeyFoundException();
+    		} 
+    		
+
+
+
+    		//also if not found matching one  throw nosuchkeyfoundexceptionagain?
+    	}
+    	bufMgr->readPage(file, nextNodePageNum, currentPageData);
+    	bufMgr->unPinPage(file, currentPageNum, false);
+    	
+	
+
+
+
+	// // If there is no key in the B+ tree that satisfies the scan criteria,
+	// // throw the exception NoSuchKeyFoundException.
+	// if () {
+	// 	throw NoSuchKeyFoundException();
+	// }
 }
 
 // -----------------------------------------------------------------------------
@@ -209,15 +311,24 @@ void BTreeIndex::scanNext(RecordId& outRid)
 // BTreeIndex::endScan
 // -----------------------------------------------------------------------------
 //
-void BTreeIndex::endScan() 
+void BTreeIndex::endScan()
 {
-	if (scanExecuting == false) {
+	if (scanExecuting == false)
+	{
+		// throws ScanNotInitializedException() when called before a successful startScan call.
 		throw ScanNotInitializedException();
-	} else {
-		scanExecuting == false;
-		bufMgr->unPinPage(file, currentPageNum, false);
 	}
-  
+	// terminates the current scan
+	scanExecuting = false;
+	
+	// unpins all the pages that have been pinned for the purpose of the scan
+	bufMgr->unPinPage(file, currentPageNum, false);
+
+	// reset scan data to NULL
+	currentPageData = nullptr;
+	PageId nullPage = -1;
+	currentPageNum = nullPage;
+	nextEntry = -1;
 }
 
 }
