@@ -271,29 +271,33 @@ void BTreeIndex::startScan(const void *lowValParm,
     	
     }
     
-    //while() looping until found
+    while(true) {
+    	int loop = 0;
     	LeafNodeInt* currentNode = (LeafNodeInt*) currentPageData;
     	for(int i = 0; i < leafOccupancy; i++) {
     		int key = currentNode->keyArray[i];
     		if((lowOpParm == GTE && highOpParm == LTE) && (key >= lowOpParm && key <= highOpParm))  {
     			scanExecuting = true;
-    			//stop looping ? bcs found?
+    			loop = 1;
+    			break;
     		} else if ((lowOpParm = GTE && highOpParm == LT) && (key >= lowOpParm && key < highOpParm)){
     			scanExecuting = true;
-    			//stop looping ? bcs found? 			
+    			loop = 1;
+    			break;			
 
     		} else if ((lowOpParm = GT && highOpParm == LTE) && (key > lowOpParm && key <= highOpParm)){
     			scanExecuting = true;
-    			//stop looping ? bcs found? 			
-
+    			loop = 1;
+    			break;		
     		} else if ((lowOpParm = GT && highOpParn == LT) && (key >= lowOpParm && key <= highOpParm)){
     			scanExecuting = true;
-    			//stop looping ? bcs found?  			
+    			loop = 1;
+    			break; 			
     		} else if ((highOpParm == LT and key >= highValParm) or (highOpParm == LTE and key >highValParm)){
     			bufMgr->unPinPage(file, currentPageNum, false);
     			throw NoSuchKeyFoundException();
     		} 
-    		//when i is the last one and still not out of loop so its not found
+    		//when i is the last one and still not out of loop so its not found in the node
     		if (i == leafOccupancy - 1) {
     			bufMgr->unPinPage(file, currentPageNum, false);
     			if(currentNode->rightSibPageNo != 0){
@@ -304,6 +308,10 @@ void BTreeIndex::startScan(const void *lowValParm,
     			}
     		}
     	}
+    	if (loop == 1) {
+    		break;
+    	}
+    }
     	
 	
 
