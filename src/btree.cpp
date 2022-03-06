@@ -241,7 +241,7 @@ void BTreeIndex::startScan(const void *lowValParm,
 	}
 
 	// If lowValue > highValue, throw the exception BadScanrangeException.
-	if (lowOpParm > highOpParm) {
+	if (lowValParm > highValParm) {
 		throw BadScanrangeException();
 	}
 
@@ -274,18 +274,32 @@ void BTreeIndex::startScan(const void *lowValParm,
     //while() looping until found
     	LeafNodeInt* currentNode = (LeafNodeInt*) currentPageData;
     	for(int i = 0; i < leafOccupancy; i++) {
-    		if ((highOp == LT and key >= highOpParm) or (highOp == LTE and key >highOpParm)){
+    		int key = currentNode->keyArray[i];
+    		if((lowOpParm == GTE && highOpParm == LTE) && (key >= lowOpParm && key <= highOpParm))  {
+    			scanExecuting = true;
+    			//stop looping ? bcs found?
+    		} else if ((lowOpParm = GTE && highOpParm == LT) && (key >= lowOpParm && key < highOpParm)){
+    			scanExecuting = true;
+    			//stop looping ? bcs found? 			
+
+    		} else if ((lowOpParm = GT && highOpParm == LTE) && (key > lowOpParm && key <= highOpParm)){
+    			scanExecuting = true;
+    			//stop looping ? bcs found? 			
+
+    		} else if ((lowOpParm = GT && highOpParn == LT) && (key >= lowOpParm && key <= highOpParm)){
+    			scanExecuting = true;
+    			//stop looping ? bcs found?  			
+    		} else if ((highOpParm == LT and key >= highValParm) or (highOpParm == LTE and key >highValParm)){
     			bufMgr->unPinPage(file, currentPageNum, false);
     			throw NoSuchKeyFoundException();
     		} 
-    		
+    		//when i is the last one and still not out of loop so its not found
+    		if (i == leafOccupancy - 1) {
+    			bufMgr->unPinPage(file, currentPageNum, false);
+    			throw NoSuchKeyFoundException();
+    		}
 
-
-
-    		//also if not found matching one  throw nosuchkeyfoundexceptionagain?
     	}
-    	bufMgr->readPage(file, nextNodePageNum, currentPageData);
-    	bufMgr->unPinPage(file, currentPageNum, false);
     	
 	
 
