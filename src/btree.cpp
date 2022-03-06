@@ -302,9 +302,19 @@ void BTreeIndex::startScan(const void *lowValParm,
 // BTreeIndex::scanNext
 // -----------------------------------------------------------------------------
 
-void BTreeIndex::scanNext(RecordId& outRid) 
+void BTreeIndex::scanNext(RecordId &outRid)
 {
+	if (!scanExecuting)
+	{
+		throw ScanNotInitializedException();
+	}
+	bufMgr->readPage(file, currentPageNum, currentPageData);
+	LeafNodeInt *currentNode = (LeafNodeInt *)currentPageData;
 
+	if (currentNode->rightSibPageNo == 0)
+	{
+		throw IndexScanCompletedException();
+	}
 }
 
 // -----------------------------------------------------------------------------
