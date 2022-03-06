@@ -333,33 +333,69 @@ namespace badgerdb
 		}
 		this->highOp = highOpParm;
 
-		// If lowValue > highValue, throw the exception BadScanrangeException.
-		if (lowValParm > highValParm)
-		{
-			// TODO: Check by comparing specific types, like INT vs INT, STRING vs STRING, etc.
-			throw BadScanrangeException();
-		}
-
 		// store scan settings into instance
 		if (this->attributeType == INTEGER)
 		{
 			this->lowValInt = *((int *)lowValParm);
 			this->highValInt = *((int *)highValParm);
+			
+			// If lowValue > highValue, throw the exception BadScanrangeException.
+			if (this->lowValInt > this->highValInt)
+			{
+				throw BadScanrangeException();
+			}
 		}
 		else if (this->attributeType == DOUBLE)
 		{
 			this->lowValDouble = *((double *)lowValParm);
 			this->highValDouble = *((double *)highValParm);
+			
+			// If lowValue > highValue, throw the exception BadScanrangeException.
+			if (this->lowValDouble > this->highValDouble)
+			{
+				throw BadScanrangeException();
+			}
 		}
 		else if (this->attributeType == STRING)
 		{
 			this->lowValString = (char *)lowValParm;
 			this->highValString = (char *)highValParm;
+			
+			// If lowValue > highValue, throw the exception BadScanrangeException.
+			if (this->lowValString.compare(this->highValString) > 0)
+			{
+				throw BadScanrangeException();
+			}
 		}
-		else
+
+
+		scanExecuting = true;
+		currentPageNum = rootPageNum;
+		bufMgr->readPage(file, currentPageNum, currentPageData);
+		bufMgr->unPinPage(file, currentPageNum, false);
+
+		if (this->attributeType == INTEGER)
 		{
-			// bad attribute type
+			// which one????
+			NonLeafNodeInt *currentNode = (NonLeafNodeInt *)currentPageData;
+			// LeafNodeInt *currentNode = (LeafNodeInt *)currentPageData;
+
+			// using the OPERATORS (LT, GT, etc) traverse tree until at level 1, so 1 level above leaf nodes
+			// then, find the page number in the pageNoArray to readPage from
+			// set currentPageNum to the found page
+			// readPage into currentPageData
+			// Scan is started/initialized and ready for scanNext
+
 		}
+		else if (this->attributeType == DOUBLE)
+		{
+			// TODO
+		}
+		else if (this->attributeType == STRING)
+		{
+			// TODO
+		}
+
 
 		// Both the high and low values are in a binary form, i.e., for integer
 		// keys, these point to the address of an integer.
@@ -369,7 +405,6 @@ namespace badgerdb
 		// currentPageNum = rootPageNum;
 		// bufMgr->readPage(file, rootPageNum, currentPageData);
 		// bufMgr->unPinPage(file, currentPageNum, true);
-		scanExecuting = true;
 		bufMgr->readPage(file, rootPageNum, currentPageData);
 		currentPageNum = rootPageNum;
 		NonLeafNodeInt *currentNode = (NonLeafNodeInt *)currentPageData;
