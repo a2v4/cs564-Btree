@@ -77,8 +77,7 @@ namespace badgerdb
 			metaInfoPage->attrByteOffset = attrByteOffset;
 			metaInfoPage->attrType = attrType;
 			metaInfoPage->rootPageNo = rootPageNum;
-			// save meta info in the headerPage
-			memcpy(headerPage, metaInfoPage, sizeof(metaInfoPage));
+
 			// unpin page, and mark dirty because we wrote the meta info to the header page
 			bufMgr->unPinPage(file, headerPageNum, true);
 
@@ -86,8 +85,8 @@ namespace badgerdb
 			Page *rootPage;
 			bufMgrIn->allocPage(file, rootPageNum, rootPage);
 
-			// initialize root
-			LeafNodeInt *root = (LeafNodeInt *)rootPage;
+			// initialize root?
+			// LeafNodeInt *root = (LeafNodeInt *)rootPage;
 
 			// insert entries for every tuple in the base relation using FileScan class.
 			FileScan *scanner = new FileScan(relationName, bufMgrIn);
@@ -146,13 +145,13 @@ namespace badgerdb
 		if (currentPageNum == rootPageNum)
 		{
 			// leafNode
-			LeafNodeInt *currNode;
+			LeafNodeInt *currNode = new LeafNodeInt;
 			insertToLeaf(currNode, currentPageNum, pair);
 		}
 		else
 		{
 			// non-leaf node
-			NonLeafNodeInt *currNode;
+			NonLeafNodeInt *currNode = new NonLeafNodeInt;
 			insertToNonLeaf(currNode, currentPageNum, pair.key);
 		}
 	}
@@ -212,7 +211,7 @@ namespace badgerdb
 	void BTreeIndex::splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
 	{
 		// create new leafNode
-		LeafNodeInt *newNode;
+		LeafNodeInt *newNode = new LeafNodeInt;
 		// copy half the keys from previous node to this one and insert new one in ascending order
 		bool insertedNewEntry = false;
 		int i = leafOccupancy / 2;
@@ -236,13 +235,12 @@ namespace badgerdb
 			i++;
 		}
 		// create new root which will be a Non leaf node
-		NonLeafNodeInt *newInternalNode;
+		NonLeafNodeInt *newInternalNode = new NonLeafNodeInt;
 		nodeOccupancy = 0;
 		// alloc new page for new non leaf node
 		Page *newPage;
-		File *newFile;
 		PageId newPageId;
-		bufMgr->allocPage(newFile, newPageId, newPage);
+		bufMgr->allocPage(file, newPageId, newPage);
 
 		// connect curr node to new leaf node
 		currNode->rightSibPageNo = newPageId;
@@ -254,10 +252,10 @@ namespace badgerdb
 	void BTreeIndex::splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key)
 	{
 		// create new non leafNode
-		NonLeafNodeInt *newNode;
+		NonLeafNodeInt *newNode = new NonLeafNodeInt;
 		// copy half the keys from previous node to this one
 
-		bool insertedNewEntry = false;
+		bool insertedNewEntry = false; // currently, not being used/checked
 		int i = nodeOccupancy / 2;
 		while (i < INTARRAYLEAFSIZE)
 		{
@@ -279,14 +277,13 @@ namespace badgerdb
 		}
 
 		// create new root which will be a Non leaf node
-		NonLeafNodeInt *newInternalNode;
+		NonLeafNodeInt *newInternalNode = new NonLeafNodeInt;
 		nodeOccupancy = 0;
 
 		// alloc new page for new non leaf node
 		Page *newPage;
-		File *newFile;
 		PageId newPageId;
-		bufMgr->allocPage(newFile, newPageId, newPage);
+		bufMgr->allocPage(file, newPageId, newPage);
 		int leftmostKey = newNode->keyArray[0];
 		// copy up leftmost key on new node up to the root
 
@@ -328,16 +325,40 @@ namespace badgerdb
 		{
 			throw BadOpcodesException();
 		}
+		this->lowOp = lowOpParm;
 		// only support LT and LTE here
 		if (highOpParm != LT || highOpParm != LTE)
 		{
 			throw BadOpcodesException();
 		}
+		this->highOp = highOpParm;
 
 		// If lowValue > highValue, throw the exception BadScanrangeException.
 		if (lowValParm > highValParm)
 		{
+			// TODO: Check by comparing specific types, like INT vs INT, STRING vs STRING, etc.
 			throw BadScanrangeException();
+		}
+
+		// store scan settings into instance
+		if (this->attributeType == INTEGER)
+		{
+			this->lowValInt = *((int *)lowValParm);
+			this->highValInt = *((int *)highValParm);
+		}
+		else if (this->attributeType == DOUBLE)
+		{
+			this->lowValDouble = *((double *)lowValParm);
+			this->highValDouble = *((double *)highValParm);
+		}
+		else if (this->attributeType == STRING)
+		{
+			this->lowValString = (char *)lowValParm;
+			this->highValString = (char *)highValParm;
+		}
+		else
+		{
+			// bad attribute type
 		}
 
 		// Both the high and low values are in a binary form, i.e., for integer
@@ -357,13 +378,13 @@ namespace badgerdb
 		{
 			// how to find the beginning of the range?
 			//(currentNode->keyArray[] > lowValParm  ?
-		PageID nextNodePageNum = currentNode->pageNoArray[first page?];
-		bufMgr->readPage(file, nextNodePageNum, currentPageData);
-		bufMgr->unPinPage(file, currentPageNum, false);
-		currentPageNum = nextNodePageNum;
+			PageId nextNodePageNum = currentNode->pageNoArray[1]; // first page???
+			bufMgr->readPage(file, nextNodePageNum, currentPageData);
+			bufMgr->unPinPage(file, nextNodePageNum, false);
+			currentPageNum = nextNodePageNum;
 
-		// go to next node
-		currentNode = (NonLeafNodeInt *)currentPageData;
+			// go to next node
+			currentNode = (NonLeafNodeInt *)currentPageData;
 		}
 
 		while (true)
@@ -373,7 +394,7 @@ namespace badgerdb
 			for (int i = 0; i < leafOccupancy; i++)
 			{
 				int key = currentNode->keyArray[i];
-				if ((lowOpParm == GTE && highOpParm == LTE) && (key >= lowOpParm && key <= highOpParm))
+				if ((this->lowOp == GTE && this->highOp == LTE) && (key >= this->lowOp && key <= this->highOp))
 				{
 					scanExecuting = true;
 					loop = 1;
@@ -381,50 +402,51 @@ namespace badgerdb
 					nextEntry = i;
 					break;
 				}
-				else if ((lowOpParm == GTE && highOpParm == LT) && (key >= lowOpParm && key < highOpParm))
+				else if ((this->lowOp == GTE && this->highOp == LT) && (key >= this->lowOp && key < this->highOp))
 				{
 					scanExecuting = true;
 					loop = 1;
 					nextEntry = i;
 					break;
 				}
-				else if ((lowOpParm == GT && highOpParm == LTE) && (key > lowOpParm && key <= highOpParm))
+				else if ((this->lowOp == GT && this->highOp == LTE) && (key > this->lowOp && key <= this->highOp))
 				{
 					scanExecuting = true;
 					loop = 1;
 					nextEntry = i;
 					break;
 				}
-				else if ((lowOpParm == GT && highOpParn == LT) && (key >= lowOpParm && key <= highOpParm))
+				else if ((this->lowOp == GT && this->highOp == LT) && (key >= this->lowOp && key <= this->highOp))
 				{
 					scanExecuting = true;
 					loop = 1;
 					nextEntry = i;
 					break;
 				}
-				else if ((lowOpParm = GTE && highOpParm == LT) && (key >= lowOpParm && key < highOpParm))
+				else if ((this->lowOp == GTE && this->highOp == LT) && (key >= this->lowOp && key < this->highOp))
 				{
 					scanExecuting = true;
 					loop = 1;
 					break;
 				}
-				else if ((lowOpParm = GT && highOpParm == LTE) && (key > lowOpParm && key <= highOpParm))
+				else if ((this->lowOp == GT && this->highOp == LTE) && (key > this->lowOp && key <= this->highOp))
 				{
 					scanExecuting = true;
 					loop = 1;
 					break;
 				}
-				else if ((lowOpParm = GT && highOpParn == LT) && (key >= lowOpParm && key <= highOpParm))
+				else if ((this->lowOp == GT && this->highOp == LT) && (key >= this->lowOp && key <= this->highOp))
 				{
 					scanExecuting = true;
 					loop = 1;
 					break;
 				}
-				else if ((highOpParm == LT and key >= highValParm) or (highOpParm == LTE and key > highValParm))
-				{
-					bufMgr->unPinPage(file, currentPageNum, false);
-					throw NoSuchKeyFoundException();
-				}
+				// Need to check which attributeType we are working with and then use that compare method properly
+				// else if ((this->highOp == LT && key >= this->h) || (this->highOp == LTE && key > highValParm))
+				// {
+				// 	bufMgr->unPinPage(file, currentPageNum, false);
+				// 	throw NoSuchKeyFoundException();
+				// }
 				// when i is the last one and still not out of loop so its not found in the node
 				if (i == leafOccupancy - 1)
 				{
@@ -432,7 +454,7 @@ namespace badgerdb
 					if (currentNode->rightSibPageNo != 0)
 					{
 						currentPageNum = currentNode->rightSibPageNo;
-						bufMgr->readPage(file, currentPageNum, currentPageData)
+						bufMgr->readPage(file, currentPageNum, currentPageData);
 					}
 					else
 					{
@@ -470,7 +492,6 @@ namespace badgerdb
 		bufMgr->readPage(file, currentPageNum, currentPageData);
 		LeafNodeInt *currentNode = (LeafNodeInt *)currentPageData;
 
-<<<<<<< HEAD
 		if (nextEntry == leafOccupancy)
 		{
 			bufMgr->unPinPage(file, currentPageNum, false);
@@ -480,29 +501,29 @@ namespace badgerdb
 			}
 			else
 			{
-				currentPageNum = currrentNode->rightSibPageNo;
-				bufMgr->readPage(file, currentPageNum, currentPageData)
-					currentNode = (LeafNodeInt *)currentPageData;
+				currentPageNum = currentNode->rightSibPageNo;
+				bufMgr->readPage(file, currentPageNum, currentPageData);
+				currentNode = (LeafNodeInt *)currentPageData;
 				nextEntry = 0;
 			}
 		}
 
 		int key = currentNode->keyArray[nextEntry];
-		if ((lowOpParm == GTE && highOpParm == LTE) && (key >= lowOpParm && key <= highOpParm))
+		if ((this->lowOp == GTE && this->highOp == LTE) && (key >= this->lowOp && key <= this->highOp))
 		{
-			outRid = currentNode->keyArray[nextEntry];
+			outRid = currentNode->ridArray[nextEntry];
 		}
-		else if ((lowOpParm == GTE && highOpParm == LT) && (key >= lowOpParm && key < highOpParm))
+		else if ((this->lowOp == GTE && this->highOp == LT) && (key >= this->lowOp && key < this->highOp))
 		{
-			outRid = currentNode->keyArray[nextEntry];
+			outRid = currentNode->ridArray[nextEntry];
 		}
-		else if ((lowOpParm == GT && highOpParm == LTE) && (key > lowOpParm && key <= highOpParm))
+		else if ((this->lowOp == GT && this->highOp == LTE) && (key > this->lowOp && key <= this->highOp))
 		{
-			outRid = currentNode->keyArray[nextEntry];
+			outRid = currentNode->ridArray[nextEntry];
 		}
-		else if ((lowOpParm == GT && highOpParn == LT) && (key >= lowOpParm && key <= highOpParm))
+		else if ((this->lowOp == GT && this->highOp == LT) && (key >= this->lowOp && key <= this->highOp))
 		{
-			outRid = currentNode->keyArray[nextEntry];
+			outRid = currentNode->ridArray[nextEntry];
 		}
 		else
 		{
@@ -512,7 +533,7 @@ namespace badgerdb
 		if (currentNode->rightSibPageNo == 0)
 		{
 
-			throw index_scan_completed_exception();
+			throw IndexScanCompletedException();
 		}
 
 		nextEntry++;
@@ -541,3 +562,4 @@ namespace badgerdb
 		currentPageNum = nullPage;
 		nextEntry = -1;
 	}
+}
