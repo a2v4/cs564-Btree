@@ -264,10 +264,10 @@ void BTreeIndex::startScan(const void *lowValParm,
     	PageID nextNodePageNum = currentNode->pageNoArray[first page?];
     	bufMgr->readPage(file, nextNodePageNum, currentPageData);
     	bufMgr->unPinPage(file, currentPageNum, false);
-    	currentPageNum = nextNodePageNo;
+    	currentPageNum = nextNodePageNum;
     	
     	//go to next node
-    	currentNode = (NoneLeafNodeInt*) currentPageData;
+    	currentNode = (NonLeafNodeInt*) currentPageData;
     	
     }
     
@@ -330,6 +330,15 @@ void BTreeIndex::startScan(const void *lowValParm,
 
 void BTreeIndex::scanNext(RecordId& outRid) 
 {
+	if(!scanExecuting) {
+    	throw ScanNotInitializedException();
+  	}	
+  	bufMgr->readPage(file, currentPageNum, currentPageData);
+  	LeafNodeInt *currentNode = (LeafNodeInt *) currentPageData;
+
+  	if(currentNode->rightSibPageNo == 0){
+  		throw index_scan_completed_exception
+  	}
 
 }
 
