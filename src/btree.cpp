@@ -167,7 +167,8 @@ void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<i
 	}
 	else
 	{
-		// insert into available page in node
+		//find appropriate spot to insert into available page in node
+		//insert in ascending order
 		int i = 0;
 		while(i < leafOccupancy && currNode->keyArray[i] < pair.key) {
 			i++;
@@ -215,13 +216,13 @@ void BTreeIndex::splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int>
 		if(insertedNewEntry) {
 			break;
 		}
-		if(pair.key <= currNode->keyArray[i]){
+		if(pair.key <= currNode->keyArray[i]){ //if key < current key in node, insert it first
 			newNode->keyArray[i] = pair.key;
 			newNode->ridArray[i] = pair.rid;
 			insertedNewEntry = true;
 		}
 		else
-		{
+		{ //else keep inserting from currNode
 			newNode->keyArray[i] = currNode->keyArray[i];
 			newNode->ridArray[i] = currNode->ridArray[i];
 		}
@@ -238,9 +239,9 @@ void BTreeIndex::splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int>
 
 	//connect curr node to new leaf node
 	currNode->rightSibPageNo = newPageId;
-
+	int leftmostKey = newNode->keyArray[0];
 	// copy up leftmost key on new node up to the root
-	insertToNonLeaf(newInternalNode, newPageId, pair.key);
+	insertToNonLeaf(newInternalNode, newPageId, leftmostKey);
 }
 
 void BTreeIndex::splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key) {
@@ -261,6 +262,7 @@ void BTreeIndex::splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key) 
 		else
 		{
 			newNode->keyArray[i] = currNode->keyArray[i];
+			newNode->pageNoArray[i] = currNode->pageNoArray[i];
 		}
 		i++;
 	}
@@ -274,9 +276,9 @@ void BTreeIndex::splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key) 
 	File *newFile;
 	PageId newPageId; 
 	bufMgr->allocPage(newFile, newPageId, newPage);
-
+	int leftmostKey = newNode->keyArray[0];
 	// copy up leftmost key on new node up to the root
-	insertToNonLeaf(newInternalNode, newPageId, key);
+	insertToNonLeaf(newInternalNode, newPageId, leftmostKey);
 }
 
 // -----------------------------------------------------------------------------
@@ -414,9 +416,8 @@ void BTreeIndex::scanNext(RecordId& outRid)
   	LeafNodeInt *currentNode = (LeafNodeInt *) currentPageData;
 
   	if(currentNode->rightSibPageNo == 0){
-  		throw index_scan_completed_exception
-  	}
-
+		throw index_scan_completed_exception();
+	}
 }
 
 // -----------------------------------------------------------------------------
