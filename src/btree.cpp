@@ -180,7 +180,7 @@ void BTreeIndex::insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKey
 	if(nodeOccupancy == INTARRAYNONLEAFSIZE) {
 		splitNonLeaf(currNode, pageid, pair);
 	} else {
-		currNode->keyArray[leafOccupancy] = pair.key;
+		currNode->keyArray[nodeOccupancy] = pair.key;
 		nodeOccupancy++;
 	}
 }
@@ -213,7 +213,7 @@ void BTreeIndex::splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int>
 
 	//connect curr node to new leaf node
 	currNode->rightSibPageNo = newPageId;
-	
+
 	// copy up leftmost key on new node up to the root
 	insertToNonLeaf(newInternalNode, newPageId, pair);
 }
