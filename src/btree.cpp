@@ -88,7 +88,10 @@ BTreeIndex::BTreeIndex(const std::string &relationName,
 
 		// initialize root
 		LeafNodeInt *root = (LeafNodeInt *)rootPage;
-
+		currentPageNum = rootPageNum;
+		currentPageData = rootPage;
+		leafOccupancy = 0;
+		
 		// insert entries for every tuple in the base relation using FileScan class.
 		FileScan *scanner = new FileScan(relationName, bufMgrIn);
 		std::string currRecord = scanner->getRecord();
@@ -138,7 +141,6 @@ BTreeIndex::~BTreeIndex()
 
 void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 {
-
 	RIDKeyPair<int> pair;
 	pair.set(rid, (*((int *)key)));
 
@@ -158,12 +160,10 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 	}
 }
 
-void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
-{
-	if (leafOccupancy == INTARRAYLEAFSIZE)
-	{
-		splitChild(currNode, pageid, pair);
-		currNode->rightSibPageNo = pageid;
+
+void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
+	if(leafOccupancy == INTARRAYLEAFSIZE) {
+		splitLeaf(currNode, pageid, pair);
 	}
 	else
 	{
@@ -172,34 +172,76 @@ void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<i
 		currNode->ridArray[leafOccupancy] = pair.rid;
 		leafOccupancy++;
 	}
+	currentPageNum = pageid;
 }
 
-void BTreeIndex::insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
-{
+
+void BTreeIndex::insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
+	if(nodeOccupancy == INTARRAYNONLEAFSIZE) {
+		splitNonLeaf(currNode, pageid, pair);
+	} else {
+		currNode->keyArray[leafOccupancy] = pair.key;
+		nodeOccupancy++;
+	}
 }
 
-void BTreeIndex::splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
-{
-	// create new leafNode
+
+void BTreeIndex::splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
+	//create new leafNode
 	LeafNodeInt *newNode;
 	// copy half the keys from previous node to this one
 	newNode->keyArray[0] = pair.key;
 	newNode->ridArray[0] = pair.rid;
 	int sizeOfNewNode = 1;
-	for (int i = leafOccupancy - 1; i > leafOccupancy / 2; i--)
+	for (int i = leafOccupancy / 2; i < INTARRAYLEAFSIZE; i++)
 	{
 		newNode->keyArray[sizeOfNewNode] = currNode->keyArray[i];
 		newNode->ridArray[sizeOfNewNode] = currNode->ridArray[i];
+		
 		sizeOfNewNode++;
 	}
 
-	// connect currNode to new Node
-	currNode->rightSibPageNo = pageid;
+	//connect curr node to new leaf node
+	currNode->rightSibPageNo = newPageId;
 
 	// create new root which will be a Non leaf node
 	NonLeafNodeInt *newInternalNode;
+	nodeOccupancy = 0;
+	//alloc new page for new non leaf node
+	Page *newPage;
+	File *newFile;
+	PageId newPageId;
+	bufMgr->allocPage(newFile, newPageId, newPage);
+
 	// copy up leftmost key on new node up to the root
-	newInternalNode->keyArray[0] = newNode->keyArray[0];
+	insertToNonLeaf(newInternalNode, newPageId, pair);
+}
+
+void BTreeIndex::splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair) {
+	//create new non leafNode
+	NonLeafNodeInt *newNode;
+	//copy half the keys from previous node to this one	
+	newNode->keyArray[0] = pair.key;
+	
+	int sizeOfNewNode = 1;
+	for (int i = nodeOccupancy - 1; i > nodeOccupancy / 2; i--)
+	{
+		newNode->keyArray[sizeOfNewNode] = currNode->keyArray[i];
+		newNode->pageNoArray[sizeOfNewNode] = currNode->pageNoArray[i];
+		sizeOfNewNode++;
+	}
+
+	//create new root which will be a Non leaf node
+	NonLeafNodeInt *newInternalNode;
+	nodeOccupancy = 0;
+
+	//alloc new page for new non leaf node
+	Page *newPage;
+	File *newFile;
+	PageId newPageId;
+	bufMgr->allocPage(newFile, newPageId, newPage);
+	// copy up leftmost key on new node up to the root
+	insertToNonLeaf(newInternalNode, newPageId, pair);
 }
 
 // -----------------------------------------------------------------------------
