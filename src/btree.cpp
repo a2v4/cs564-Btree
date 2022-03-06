@@ -174,9 +174,43 @@ void BTreeIndex::startScan(const void *lowValParm,
 
 	// Start from root to find out the leaf page that contains the first RecordID
 	// that satisfies the scan parameters. Keep that page pinned in the buffer pool.
-	currentPageNum = rootPageNum;
-	bufMgr->readPage(file, rootPageNum, currentPageData);
-	bufMgr->unPinPage(file, currentPageNum, true);
+	//currentPageNum = rootPageNum;
+	//bufMgr->readPage(file, rootPageNum, currentPageData);
+	//bufMgr->unPinPage(file, currentPageNum, true);
+	scanExecuting = true;
+    bufMgr->readPage(file, rootPageNum, currentPageData);
+    currentPageNum = rootPageNum;
+    NonLeafNodeInt* currentNode = (NonLeafNodeInt *) currentPageData;
+
+    while(currentNode-> level != 1){
+    	//how to find the beginning of the range?
+    	//(currentNode->keyArray[] > lowValParm  ?
+    	PageID nextNodePageNum = currentNode->pageNoArray[first page?];
+    	bufMgr->readPage(file, nextNodePageNum, currentPageData);
+    	bufMgr->unPinPage(file, currentPageNum, false);
+    	currentPageNum = nextNodePageNo;
+    	
+    	//go to next node
+    	currentNode = (NoneLeafNodeInt*) currentPageData;
+    	
+    }
+    
+    //while() looping until found
+    	LeafNodeInt* currentNode = (LeafNodeInt*) currentPageData;
+    	for(int i = 0; i < leafOccupancy; i++) {
+    		if ((highOp == LT and key >= highOpParm) or (highOp == LTE and key >highOpParm)){
+    			bufMgr->unPinPage(file, currentPageNum, false);
+    			throw NoSuchKeyFoundException();
+    		} 
+    		
+
+
+
+    		//also if not found matching one  throw nosuchkeyfoundexceptionagain?
+    	}
+    	bufMgr->readPage(file, nextNodePageNum, currentPageData);
+    	bufMgr->unPinPage(file, currentPageNum, false);
+    	
 	
 
 
