@@ -332,11 +332,11 @@ class BTreeIndex {
 
   void splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
 
-  void splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
+  void splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key);
 
   void insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
 
-  void insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
+  void insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key);
 
 
   /**
