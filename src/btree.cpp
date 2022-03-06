@@ -140,14 +140,41 @@ namespace badgerdb
 		RIDKeyPair<int> pair;
 		pair.set(rid, (*((int *)key)));
 
-	// we are always inserting as the leafnode
-	LeafNodeInt *currNode;
-	//I think we have to traverse to the right leaf using scan before inserting
-	//given pair. Can't just call insertToLeaf
+		// we are always inserting as the leafnode
+		LeafNodeInt *currNode;
 
-	insertToLeaf(currNode, currentPageNum, pair);
-}
+		//traverse root values
 
+		insertToLeaf(currNode, currentPageNum, pair);
+	}
+
+	void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
+	{
+		if (leafOccupancy == INTARRAYLEAFSIZE)
+		{
+			splitLeaf(currNode, pageid, pair);
+			currNode->rightSibPageNo = pageid;
+		}
+		else
+		{
+			// find appropriate spot to insert into available page in node
+			// insert in ascending order
+			int i = 0;
+			while (i < leafOccupancy && currNode->keyArray[i] < pair.key)
+			{
+				i++;
+			}
+			// shift all right values one place to the right
+			for (int j = i + 1; j < INTARRAYLEAFSIZE; j++)
+			{
+				currNode->keyArray[j] = currNode->keyArray[j - 1];
+			}
+			currNode->keyArray[i] = pair.key;
+			currNode->ridArray[i] = pair.rid;
+			leafOccupancy++;
+		}
+	}
+	
 	void BTreeIndex::insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key)
 	{
 		if (nodeOccupancy == INTARRAYNONLEAFSIZE)
