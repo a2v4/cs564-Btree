@@ -156,7 +156,7 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 	{
 		// non-leaf node
 		NonLeafNodeInt *currNode;
-		insertToNonLeaf(currNode, currentPageNum, pair);
+		insertToNonLeaf(currNode, currentPageNum, pair.key);
 	}
 }
 
@@ -180,7 +180,7 @@ void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<i
 		currNode->ridArray[i] = pair.rid;
 		leafOccupancy++;
 	}
-	currentPageNum = pageid;
+	
 }
 
 
@@ -298,6 +298,7 @@ void BTreeIndex::splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key) 
  * @throws  NoSuchKeyFoundException If there is no key in the B+ tree that satisfies the scan criteria.
  **/
 
+
 void BTreeIndex::startScan(const void *lowValParm,
 						   const Operator lowOpParm,
 						   const void *highValParm,
@@ -348,8 +349,9 @@ void BTreeIndex::startScan(const void *lowValParm,
     	
     }
     
-    //while() looping until found
-    	LeafNodeInt* currNode = (LeafNodeInt*) currentPageData;
+    while(true) {
+    	int loop = 0;
+    	LeafNodeInt* currentNode = (LeafNodeInt*) currentPageData;
     	for(int i = 0; i < leafOccupancy; i++) {
     		int key = currentNode->keyArray[i];
     		if((lowOpParm == GTE && highOpParm == LTE) && (key >= lowOpParm && key <= highOpParm))  {
@@ -399,7 +401,6 @@ void BTreeIndex::startScan(const void *lowValParm,
 	// 	throw NoSuchKeyFoundException();
 	// }
 }
-
 // -----------------------------------------------------------------------------
 // BTreeIndex::scanNext
 // -----------------------------------------------------------------------------
