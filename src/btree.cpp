@@ -188,7 +188,17 @@ void BTreeIndex::insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKey
 	if(nodeOccupancy == INTARRAYNONLEAFSIZE) {
 		splitNonLeaf(currNode, pageid, pair);
 	} else {
-		currNode->keyArray[nodeOccupancy] = pair.key;
+		
+		// insert into available page in node
+		int i = 0;
+		while(i < nodeOccupancy && currNode->keyArray[i] < pair.key) {
+			i++;
+		}
+		//shift all right values one place to the right
+		for(int j = i + 1; j < INTARRAYNONLEAFSIZE; j++){
+			currNode->keyArray[j] = currNode->keyArray[j - 1];
+		}
+		currNode->keyArray[i] = pair.key;
 		nodeOccupancy++;
 	}
 }
