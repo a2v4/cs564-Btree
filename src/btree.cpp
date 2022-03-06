@@ -296,9 +296,13 @@ void BTreeIndex::startScan(const void *lowValParm,
     		//when i is the last one and still not out of loop so its not found
     		if (i == leafOccupancy - 1) {
     			bufMgr->unPinPage(file, currentPageNum, false);
-    			throw NoSuchKeyFoundException();
+    			if(currentNode->rightSibPageNo != 0){
+    				currentPageNum = currentNode->rightSibPageNo;
+    				bufMgr->readPage(file, currentPageNum, currentPageData)
+    			} else {
+    				throw NoSuchKeyFoundException();
+    			}
     		}
-
     	}
     	
 	
