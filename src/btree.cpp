@@ -201,8 +201,6 @@ void BTreeIndex::splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int>
 		sizeOfNewNode++;
 	}
 
-	//connect curr node to new leaf node
-	currNode->rightSibPageNo = newPageId;
 
 	// create new root which will be a Non leaf node
 	NonLeafNodeInt *newInternalNode;
@@ -213,6 +211,9 @@ void BTreeIndex::splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int>
 	PageId newPageId;
 	bufMgr->allocPage(newFile, newPageId, newPage);
 
+	//connect curr node to new leaf node
+	currNode->rightSibPageNo = newPageId;
+	
 	// copy up leftmost key on new node up to the root
 	insertToNonLeaf(newInternalNode, newPageId, pair);
 }
