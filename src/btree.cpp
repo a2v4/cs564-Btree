@@ -142,20 +142,12 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 	RIDKeyPair<int> pair;
 	pair.set(rid, (*((int *)key)));
 
-	// compare page number equal to starting root page number, if true, then leaf else non-leaf node
-	// if leaf node, make helper for insert in leaf Node
-	if (currentPageNum == rootPageNum)
-	{
-		// leafNode
-		LeafNodeInt *currNode;
-		insertToLeaf(currNode, currentPageNum, pair);
-	}
-	else
-	{
-		// non-leaf node
-		NonLeafNodeInt *currNode;
-		insertToNonLeaf(currNode, currentPageNum, pair.key);
-	}
+	// we are always inserting as the leafnode
+	LeafNodeInt *currNode;
+	//I think we have to traverse to the right leaf using scan before inserting
+	//given pair. Can't just call insertToLeaf
+
+	insertToLeaf(currNode, currentPageNum, pair);
 }
 
 void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
@@ -190,7 +182,7 @@ void BTreeIndex::insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int ke
 		splitNonLeaf(currNode, pageid, key);
 	} else {
 		
-		// insert into available page in node
+		// insert into available page in node in sorted ascending order
 		int i = 0;
 		while(i < nodeOccupancy && currNode->keyArray[i] < key) {
 			i++;
@@ -342,7 +334,7 @@ void BTreeIndex::startScan(const void *lowValParm,
     while(currentNode-> level != 1){
     	//how to find the beginning of the range?
     	//(currentNode->keyArray[] > lowValParm  ?
-    	PageID nextNodePageNum = currentNode->pageNoArray[first page?];
+    	PageId nextNodePageNum = currentNode->pageNoArray[first page?];
     	bufMgr->readPage(file, nextNodePageNum, currentPageData);
     	bufMgr->unPinPage(file, currentPageNum, false);
     	currentPageNum = nextNodePageNum;
