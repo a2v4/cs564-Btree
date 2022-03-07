@@ -238,13 +238,15 @@ namespace badgerdb
 	{
 		int occupancy = sizeof(currNode->keyArray)/sizeof(currNode->keyArray[0]);
 		
-		if (occupancy == INTARRAYLEAFSIZE)
+		if (occupancy == INTARRAYLEAFSIZE) //if leaf full
 		{
-			splitLeaf(currNode, pageid, pair);
-			currNode->rightSibPageNo = pageid;
+			//split leaf
+			splitLeaf(currNode, pageid, pair, occupancy);
+			currNode->rightSibPageNo = pageid; //attach new node to current node
 		}
 		else
 		{
+			//else, insert into existing leaf
 			sortedLeafEntry(currNode, pair, occupancy);
 		}
 	}
@@ -253,24 +255,25 @@ namespace badgerdb
 	{
 		int occupancy = sizeof(currNode->keyArray)/sizeof(currNode->keyArray[0]);
 
-		if (nodeOccupancy == INTARRAYNONLEAFSIZE)
+		if (nodeOccupancy == INTARRAYNONLEAFSIZE) //if full
 		{
-			splitNonLeaf(currNode, pageid, key);
+			//split node
+			splitNonLeaf(currNode, pageid, key, occupancy);
 		}
 		else
 		{
-
+			//else, insert into existing node
 			sortedNonLeafEntry(currNode, key, occupancy);
 		}
 	}
 
-	void BTreeIndex::splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
+	void BTreeIndex::splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair, int occupancy)
 	{
 		// create new leafNode
 		LeafNodeInt *newNode = new LeafNodeInt;
 		
 		//insert in sorted order
-		sortedLeafEntry(currNode, pair, sizeof(currNode->keyArray)/sizeof(currNode->keyArray[0]));
+		sortedLeafEntry(currNode, pair, occupancy);
 
 		// Now, copy half the keys from previous node to this one
 		bool insertedNewEntry = false;
@@ -309,13 +312,13 @@ namespace badgerdb
 		insertToNonLeaf(newInternalNode, newPageId, leftmostKey);
 	}
 
-	void BTreeIndex::splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key)
+	void BTreeIndex::splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key, int occupancy)
 	{
 		// create new non leafNode
 		NonLeafNodeInt *newNode = new NonLeafNodeInt;
 
 		//insert new key into current node in sorted order first 
-		sortedNonLeafEntry(currNode, key, sizeof(currNode->keyArray)/sizeof(currNode->keyArray[0]));
+		sortedNonLeafEntry(currNode, key, occupancy);
 
 		// copy half the keys from previous node to this one
 		bool insertedNewEntry = false; // currently, not being used/checked
