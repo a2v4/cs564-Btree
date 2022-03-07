@@ -140,29 +140,66 @@ namespace badgerdb
 		RIDKeyPair<int> pair;
 		pair.set(rid, (*((int *)key)));
 
+		Page* currPage;
+		bufMgr->readPage(file, currentPageNum, currPage);
+
 		// compare page number equal to starting root page number, if true, then leaf else non-leaf node
 		if (currentPageNum == rootPageNum)
 		{
 			// leafNode
-			LeafNodeInt *currNode = new LeafNodeInt;
+			LeafNodeInt *currNode = (LeafNodeInt *)currPage;
 			insertToLeaf(currNode, currentPageNum, pair);
 		}
 		else
 		{
 			// non-leaf node, so we have to find the correct leaf to insert entry into
 			//we have to traverse down the tree
+			NonLeafNodeInt *currNode = (NonLeafNodeInt *)currPage;
+			traverse(currNode, pair);
 		}
 	}
 
-	void BTreeIndex::traverse(NonLeafNodeInt* root, int targetKey) {
+	void BTreeIndex::traverse(NonLeafNodeInt* root, RIDKeyPair<int> pair) {
 		
 		for(int i = INTARRAYNONLEAFSIZE - 1 ; i >= 0; i--){
-			if(targetKey > root->keyArray[i]){
-				
+			if(pair.key > root->keyArray[i]){
+				//pointer to the right of curr key
+				if(root->pageNoArray[i+1] == /*is leaf*/) { //if leaf, insert
+					Page *leaf;
+					bufMgr->readPage(file, root->pageNoArray[i + 1], leaf);
+					LeafNodeInt *leafNode = (LeafNodeInt *)leaf;
+					insertToLeaf(leafNode, root->pageNoArray[i + 1], pair);
+				}
+				else //else traverse all children
+				{
+					for(int child = 0; child < INTARRAYNONLEAFSIZE + 1; i++) {
+						Page *nonLeaf;
+						bufMgr->readPage(file, root->pageNoArray[child], nonLeaf);
+						NonLeafNodeInt *nonLeafNode = (NonLeafNodeInt *)nonLeaf;
+						traverse(nonLeafNode, pair);
+					}
+				}
+			} else if(pair.key >= root->keyArray[i]) {
+				//pointer to the left of curr key
+					if(root->pageNoArray[i] == /*is leaf*/) { //if leaf, insert
+					Page *leaf;
+					bufMgr->readPage(file, root->pageNoArray[i], leaf);
+					LeafNodeInt *leafNode = (LeafNodeInt *)leaf;
+					insertToLeaf(leafNode, root->pageNoArray[i], pair);
+				}
+				else //else traverse all children
+				{
+					for(int child = 0; child < INTARRAYNONLEAFSIZE + 1; i++) {
+						Page *nonLeaf;
+						bufMgr->readPage(file, root->pageNoArray[child], nonLeaf);
+						NonLeafNodeInt *nonLeafNode = (NonLeafNodeInt *)nonLeaf;
+						traverse(nonLeafNode, pair);
+					}
+				}
+
 			}
 		}
-	}
-
+	} 
 
 	void BTreeIndex::sortedLeafEntry(LeafNodeInt* currNode, RIDKeyPair<int> pair) {
 		//Insert new key in ascending order
@@ -181,7 +218,7 @@ namespace badgerdb
 		leafOccupancy++;
 	}
 
-	void BTreeIndex::sortedNonLeafEntry(NonLeafNodeInt* currNode, int key) {
+	void BTreeIndex::sortedNonLeafEntry(NonLeafNodeInt* currNode, int key){
 			// insert into available page in node
 			int i = 0;
 			while (i < nodeOccupancy && currNode->keyArray[i] < key)
@@ -197,6 +234,7 @@ namespace badgerdb
 			nodeOccupancy++;
 
 	}
+
 	void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
 	{
 		if (leafOccupancy == INTARRAYLEAFSIZE)
@@ -221,6 +259,7 @@ namespace badgerdb
 			// currNode->keyArray[i] = pair.key;
 			// currNode->ridArray[i] = pair.rid;
 			// leafOccupancy++;
+			sortedLeafEntry(currNode, pair);
 		}
 	}
 
@@ -234,18 +273,19 @@ namespace badgerdb
 		{
 
 			// insert into available page in node
-			int i = 0;
-			while (i < nodeOccupancy && currNode->keyArray[i] < key)
-			{
-				i++;
-			}
-			// shift all right values one place to the right
-			for (int j = i + 1; j < INTARRAYNONLEAFSIZE; j++)
-			{
-				currNode->keyArray[j] = currNode->keyArray[j - 1];
-			}
-			currNode->keyArray[i] = key;
-			nodeOccupancy++;
+			// int i = 0;
+			// while (i < nodeOccupancy && currNode->keyArray[i] < key)
+			// {
+			// 	i++;
+			// }
+			// // shift all right values one place to the right
+			// for (int j = i + 1; j < INTARRAYNONLEAFSIZE; j++)
+			// {
+			// 	currNode->keyArray[j] = currNode->keyArray[j - 1];
+			// }
+			// currNode->keyArray[i] = key;
+			// nodeOccupancy++;
+			sortedNonLeafEntry(currNode, key);
 		}
 	}
 
@@ -254,8 +294,10 @@ namespace badgerdb
 		// create new leafNode
 		LeafNodeInt *newNode = new LeafNodeInt;
 		
+		//insert in sorted order
+		sortedLeafEntry(currNode, pair);
 
-		//Now, copy half the keys from previous node to this one
+		// Now, copy half the keys from previous node to this one
 		bool insertedNewEntry = false;
 		int i = leafOccupancy/2;
 		while (i < INTARRAYLEAFSIZE)
@@ -296,8 +338,11 @@ namespace badgerdb
 	{
 		// create new non leafNode
 		NonLeafNodeInt *newNode = new NonLeafNodeInt;
-		// copy half the keys from previous node to this one
 
+		//insert new key into current node in sorted order first 
+		sortedNonLeafEntry(currNode, key);
+
+		// copy half the keys from previous node to this one
 		bool insertedNewEntry = false; // currently, not being used/checked
 		int i = nodeOccupancy / 2;
 		while (i < INTARRAYLEAFSIZE)
@@ -329,8 +374,8 @@ namespace badgerdb
 		PageId newPageId;
 		bufMgr->allocPage(file, newPageId, newPage);
 		int leftmostKey = newNode->keyArray[0];
-		// copy up leftmost key on new node up to the root
 
+		// copy up leftmost key on new node up to the root
 		insertToNonLeaf(newInternalNode, newPageId, leftmostKey);
 	}
 

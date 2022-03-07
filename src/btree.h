@@ -338,7 +338,7 @@ class BTreeIndex {
 
   void insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key);
 
-  void traverse(NonLeafNodeInt *root);
+  void traverse(NonLeafNodeInt* root, RIDKeyPair<int> pair);
 
   void sortedLeafEntry(LeafNodeInt *currNode, RIDKeyPair<int> pair);
 
