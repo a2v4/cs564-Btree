@@ -140,14 +140,63 @@ namespace badgerdb
 		RIDKeyPair<int> pair;
 		pair.set(rid, (*((int *)key)));
 
-		// we are always inserting as the leafnode
-		LeafNodeInt *currNode;
-
-		//traverse root values
-
-		insertToLeaf(currNode, currentPageNum, pair);
+		// compare page number equal to starting root page number, if true, then leaf else non-leaf node
+		if (currentPageNum == rootPageNum)
+		{
+			// leafNode
+			LeafNodeInt *currNode = new LeafNodeInt;
+			insertToLeaf(currNode, currentPageNum, pair);
+		}
+		else
+		{
+			// non-leaf node, so we have to find the correct leaf to insert entry into
+			//we have to traverse down the tree
+		}
 	}
 
+	void BTreeIndex::traverse(NonLeafNodeInt* root, int targetKey) {
+		
+		for(int i = INTARRAYNONLEAFSIZE - 1 ; i >= 0; i--){
+			if(targetKey > root->keyArray[i]){
+				
+			}
+		}
+	}
+
+
+	void BTreeIndex::sortedLeafEntry(LeafNodeInt* currNode, RIDKeyPair<int> pair) {
+		//Insert new key in ascending order
+		int i = 0;
+		while (i < leafOccupancy && currNode->keyArray[i] < pair.key)
+		{
+			i++;
+		}
+		// shift all right values one place to the right
+		for (int j = i + 1; j < INTARRAYLEAFSIZE; j++)
+		{
+			currNode->keyArray[j] = currNode->keyArray[j - 1];
+		}
+		currNode->keyArray[i] = pair.key;
+		currNode->ridArray[i] = pair.rid;
+		leafOccupancy++;
+	}
+
+	void BTreeIndex::sortedNonLeafEntry(NonLeafNodeInt* currNode, int key) {
+			// insert into available page in node
+			int i = 0;
+			while (i < nodeOccupancy && currNode->keyArray[i] < key)
+			{
+				i++;
+			}
+			// shift all right values one place to the right
+			for (int j = i + 1; j < INTARRAYNONLEAFSIZE; j++)
+			{
+				currNode->keyArray[j] = currNode->keyArray[j - 1];
+			}
+			currNode->keyArray[i] = key;
+			nodeOccupancy++;
+
+	}
 	void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
 	{
 		if (leafOccupancy == INTARRAYLEAFSIZE)
@@ -159,22 +208,22 @@ namespace badgerdb
 		{
 			// find appropriate spot to insert into available page in node
 			// insert in ascending order
-			int i = 0;
-			while (i < leafOccupancy && currNode->keyArray[i] < pair.key)
-			{
-				i++;
-			}
-			// shift all right values one place to the right
-			for (int j = i + 1; j < INTARRAYLEAFSIZE; j++)
-			{
-				currNode->keyArray[j] = currNode->keyArray[j - 1];
-			}
-			currNode->keyArray[i] = pair.key;
-			currNode->ridArray[i] = pair.rid;
-			leafOccupancy++;
+			// int i = 0;
+			// while (i < leafOccupancy && currNode->keyArray[i] < pair.key)
+			// {
+			// 	i++;
+			// }
+			// // shift all right values one place to the right
+			// for (int j = i + 1; j < INTARRAYLEAFSIZE; j++)
+			// {
+			// 	currNode->keyArray[j] = currNode->keyArray[j - 1];
+			// }
+			// currNode->keyArray[i] = pair.key;
+			// currNode->ridArray[i] = pair.rid;
+			// leafOccupancy++;
 		}
 	}
-	
+
 	void BTreeIndex::insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key)
 	{
 		if (nodeOccupancy == INTARRAYNONLEAFSIZE)
@@ -204,9 +253,11 @@ namespace badgerdb
 	{
 		// create new leafNode
 		LeafNodeInt *newNode = new LeafNodeInt;
-		// copy half the keys from previous node to this one and insert new one in ascending order
+		
+
+		//Now, copy half the keys from previous node to this one
 		bool insertedNewEntry = false;
-		int i = leafOccupancy / 2;
+		int i = leafOccupancy/2;
 		while (i < INTARRAYLEAFSIZE)
 		{
 			if (insertedNewEntry)
@@ -264,6 +315,7 @@ namespace badgerdb
 			{
 				newNode->keyArray[i] = currNode->keyArray[i];
 				newNode->pageNoArray[i] = currNode->pageNoArray[i];
+
 			}
 			i++;
 		}

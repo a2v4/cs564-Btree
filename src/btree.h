@@ -338,6 +338,11 @@ class BTreeIndex {
 
   void insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key);
 
+  void traverse(NonLeafNodeInt *root);
+
+  void sortedLeafEntry(LeafNodeInt *currNode, RIDKeyPair<int> pair);
+
+  void sortedNonLeafEntry(NonLeafNodeInt *currNode, int key);
 
   /**
    * Begin a filtered scan of the index.  For instance, if the method is called
