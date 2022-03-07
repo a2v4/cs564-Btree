@@ -270,7 +270,7 @@ namespace badgerdb
 		LeafNodeInt *newNode = new LeafNodeInt;
 		
 		//insert in sorted order
-		sortedLeafEntry(currNode, pair);
+		sortedLeafEntry(currNode, pair, sizeof(currNode->keyArray)/sizeof(currNode->keyArray[0]));
 
 		// Now, copy half the keys from previous node to this one
 		bool insertedNewEntry = false;
@@ -315,7 +315,7 @@ namespace badgerdb
 		NonLeafNodeInt *newNode = new NonLeafNodeInt;
 
 		//insert new key into current node in sorted order first 
-		sortedNonLeafEntry(currNode, key);
+		sortedNonLeafEntry(currNode, key, sizeof(currNode->keyArray)/sizeof(currNode->keyArray[0]));
 
 		// copy half the keys from previous node to this one
 		bool insertedNewEntry = false; // currently, not being used/checked
