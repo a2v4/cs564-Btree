@@ -3,3 +3,5 @@
 **/.vscode
 **/*.o
 **/.DS_STORE
+**/relA
+**/*.a
