@@ -340,9 +340,9 @@ class BTreeIndex {
 
   void traverse(NonLeafNodeInt* root, RIDKeyPair<int> pair);
 
-  void sortedLeafEntry(LeafNodeInt *currNode, RIDKeyPair<int> pair);
+  void sortedLeafEntry(LeafNodeInt *currNode, RIDKeyPair<int> pair, int occupancy);
 
-  void sortedNonLeafEntry(NonLeafNodeInt *currNode, int key);
+  void sortedNonLeafEntry(NonLeafNodeInt* currNode, int key, int occupancy);
 
   /**
    * Begin a filtered scan of the index.  For instance, if the method is called

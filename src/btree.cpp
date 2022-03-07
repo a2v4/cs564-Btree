@@ -201,7 +201,7 @@ namespace badgerdb
 		}
 	} 
 
-	void BTreeIndex::sortedLeafEntry(LeafNodeInt* currNode, RIDKeyPair<int> pair) {
+	void BTreeIndex::sortedLeafEntry(LeafNodeInt* currNode, RIDKeyPair<int> pair, int occupancy) {
 		//Insert new key in ascending order
 		int i = 0;
 		while (i < leafOccupancy && currNode->keyArray[i] < pair.key)
@@ -209,16 +209,16 @@ namespace badgerdb
 			i++;
 		}
 		// shift all right values one place to the right
-		for (int j = i + 1; j < INTARRAYLEAFSIZE; j++)
+		for (int j = i + 1; j < leafOccupancy; j++)
 		{
 			currNode->keyArray[j] = currNode->keyArray[j - 1];
 		}
 		currNode->keyArray[i] = pair.key;
 		currNode->ridArray[i] = pair.rid;
-		leafOccupancy++;
+		occupancy++;
 	}
 
-	void BTreeIndex::sortedNonLeafEntry(NonLeafNodeInt* currNode, int key){
+	void BTreeIndex::sortedNonLeafEntry(NonLeafNodeInt* currNode, int key, int occupancy){
 			// insert into available page in node
 			int i = 0;
 			while (i < nodeOccupancy && currNode->keyArray[i] < key)
@@ -226,45 +226,33 @@ namespace badgerdb
 				i++;
 			}
 			// shift all right values one place to the right
-			for (int j = i + 1; j < INTARRAYNONLEAFSIZE; j++)
+			for (int j = i + 1; j < nodeOccupancy; j++)
 			{
 				currNode->keyArray[j] = currNode->keyArray[j - 1];
 			}
 			currNode->keyArray[i] = key;
-			nodeOccupancy++;
-
+			occupancy++;
 	}
 
 	void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
 	{
-		if (leafOccupancy == INTARRAYLEAFSIZE)
+		int occupancy = sizeof(currNode->keyArray)/sizeof(currNode->keyArray[0]);
+		
+		if (occupancy == INTARRAYLEAFSIZE)
 		{
 			splitLeaf(currNode, pageid, pair);
 			currNode->rightSibPageNo = pageid;
 		}
 		else
 		{
-			// find appropriate spot to insert into available page in node
-			// insert in ascending order
-			// int i = 0;
-			// while (i < leafOccupancy && currNode->keyArray[i] < pair.key)
-			// {
-			// 	i++;
-			// }
-			// // shift all right values one place to the right
-			// for (int j = i + 1; j < INTARRAYLEAFSIZE; j++)
-			// {
-			// 	currNode->keyArray[j] = currNode->keyArray[j - 1];
-			// }
-			// currNode->keyArray[i] = pair.key;
-			// currNode->ridArray[i] = pair.rid;
-			// leafOccupancy++;
-			sortedLeafEntry(currNode, pair);
+			sortedLeafEntry(currNode, pair, occupancy);
 		}
 	}
 
 	void BTreeIndex::insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key)
 	{
+		int occupancy = sizeof(currNode->keyArray)/sizeof(currNode->keyArray[0]);
+
 		if (nodeOccupancy == INTARRAYNONLEAFSIZE)
 		{
 			splitNonLeaf(currNode, pageid, key);
@@ -272,20 +260,7 @@ namespace badgerdb
 		else
 		{
 
-			// insert into available page in node
-			// int i = 0;
-			// while (i < nodeOccupancy && currNode->keyArray[i] < key)
-			// {
-			// 	i++;
-			// }
-			// // shift all right values one place to the right
-			// for (int j = i + 1; j < INTARRAYNONLEAFSIZE; j++)
-			// {
-			// 	currNode->keyArray[j] = currNode->keyArray[j - 1];
-			// }
-			// currNode->keyArray[i] = key;
-			// nodeOccupancy++;
-			sortedNonLeafEntry(currNode, key);
+			sortedNonLeafEntry(currNode, key, occupancy);
 		}
 	}
 
