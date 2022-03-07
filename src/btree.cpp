@@ -402,18 +402,36 @@ namespace badgerdb
 
 		// Start from root to find out the leaf page that contains the first RecordID
 		// that satisfies the scan parameters. Keep that page pinned in the buffer pool.
-		// currentPageNum = rootPageNum;
-		// bufMgr->readPage(file, rootPageNum, currentPageData);
-		// bufMgr->unPinPage(file, currentPageNum, true);
 		bufMgr->readPage(file, rootPageNum, currentPageData);
 		currentPageNum = rootPageNum;
+		// currentNode should start at the ROOT, which should be a NonLeafNode
 		NonLeafNodeInt *currentNode = (NonLeafNodeInt *)currentPageData;
 
+		// use the lowValParm to find the start of the range in the B-Tree
+		// this works because you can only use GT or GTE with the lowValParm
 		while (currentNode->level != 1)
 		{
-			// how to find the beginning of the range?
-			//(currentNode->keyArray[] > lowValParm  ?
-			PageId nextNodePageNum = currentNode->pageNoArray[1]; // first page???
+			int index = 0;
+			while (true) {
+				// index is past at or past the limit
+				if (index >= nodeOccupancy) {
+					break;
+				}
+				// check if page is valid
+				//                       index or index+1
+				if (currentNode->pageNoArray[index] == Page::INVALID_NUMBER) {
+					break;
+				}
+				// check if the lowVal is less than the current key at the index
+				// currrent only works with INTEGERS
+				if (this->lowValInt < currentNode->keyArray[index]) {
+					break;
+				}
+				// increment and run again
+				index++;
+			}
+			// Use the index we found to get the pageNo
+			PageId nextNodePageNum = currentNode->pageNoArray[index];
 			bufMgr->readPage(file, nextNodePageNum, currentPageData);
 			bufMgr->unPinPage(file, nextNodePageNum, false);
 			currentPageNum = nextNodePageNum;
@@ -421,6 +439,8 @@ namespace badgerdb
 			// go to next node
 			currentNode = (NonLeafNodeInt *)currentPageData;
 		}
+
+		// TODO: (ANDY) still need to find LEAF and INDEX of starting position
 
 		while (true)
 		{
