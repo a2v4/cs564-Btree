@@ -170,7 +170,7 @@ namespace badgerdb
 		for (int i = INTARRAYNONLEAFSIZE - 1; i >= 0; i--)
 		{
 			if(pair.key > root->keyArray[i]){//if key value > current key, insert at right of curr key
-				if(isLeaf) { //if leaf, insert
+				if(isLeaf) { //if next node leaf, insert
 					Page *leaf;
 					bufMgr->readPage(file, root->pageNoArray[i + 1], leaf);
 					LeafNodeInt *leafNode = (LeafNodeInt *)leaf;
@@ -185,12 +185,12 @@ namespace badgerdb
 						traverse(nonLeafNode, pair, currLevel + 1);
 					}
 				}
-			} else if(pair.key >= root->keyArray[i]) {//if key value < current key, insert at left of curr key
-					if(root->pageNoArray[i] == isLeaf) { //if leaf, insert
-					Page *leaf;
-					bufMgr->readPage(file, root->pageNoArray[i], leaf);
-					LeafNodeInt *leafNode = (LeafNodeInt *)leaf;
-					insertToLeaf(leafNode, root->pageNoArray[i], pair);
+			} else if(pair.key <= root->keyArray[i]) {//if key value <= current key, insert at left of curr key
+					if(isLeaf) { //if next node leaf, insert
+						Page *leaf;
+						bufMgr->readPage(file, root->pageNoArray[i], leaf);
+						LeafNodeInt *leafNode = (LeafNodeInt *)leaf;
+						insertToLeaf(leafNode, root->pageNoArray[i], pair);
 				}
 				else //else traverse all children
 				{
