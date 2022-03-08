@@ -187,10 +187,11 @@ void test4()
 	std::cout << "--------------------" << std::endl;
 	std::cout << "createRelationLargeSize" << std::endl;
 	createRelationLargeSize(10000);
+	indexTests();
 	deleteRelation();
 }
 
-void test6()
+void test5()
 {
 	//search for key from -1000 to 6000
 	std::cout << "--------------------" << std::endl;
@@ -200,7 +201,7 @@ void test6()
 	deleteRelation();
 }
 
-void test5()
+void test6()
 {
 	std::cout << "--------------------" << std::endl;
 	std::cout << "reopenAnIndexOnExistingOne" << std::endl;
