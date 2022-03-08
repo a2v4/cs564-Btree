@@ -563,161 +563,44 @@ void BTreeIndex::startScan(const void *lowValParm,
 	//bufMgr->readPage(file, rootPageNum, currentPageData);
 	//bufMgr->unPinPage(file, currentPageNum, true);
 	scanExecuting = true;
-    bufMgr->readPage(file, rootPageNum, currentPageData);
-    currentPageNum = rootPageNum;
-    NonLeafNodeInt* currentNode = (NonLeafNodeInt *) currentPageData;
-
-    while(currentNode-> level != 1){
-    	//how to find the beginning of the range?
-    	//(currentNode->keyArray[] > lowValParm  ?
-    	PageID nextNodePageNum = currentNode->pageNoArray[first page?];
-    	bufMgr->readPage(file, nextNodePageNum, currentPageData);
-    	bufMgr->unPinPage(file, currentPageNum, false);
-    	currentPageNum = nextNodePageNum;
-    	
-    	//go to next node
-    	currentNode = (NonLeafNodeInt*) currentPageData;
-    	
-    }
-    
-    while(true) {
-    	int loop = 0;
-    	LeafNodeInt* currentNode = (LeafNodeInt*) currentPageData;
-    	for(int i = 0; i < leafOccupancy; i++) {
-    		int key = currentNode->keyArray[i];
-    		if((lowOpParm == GTE && highOpParm == LTE) && (key >= lowOpParm && key <= highOpParm))  {
-    			scanExecuting = true;
-    			loop = 1;
-    			nextEntry = i;
-    			break;
-    		} else if ((lowOpParm == GTE && highOpParm == LT) && (key >= lowOpParm && key < highOpParm)){
-    			scanExecuting = true;
-    			loop = 1;
-    			nextEntry = i;
-    			break;			
-    		} else if ((lowOpParm == GT && highOpParm == LTE) && (key > lowOpParm && key <= highOpParm)){
-    			scanExecuting = true;
-    			loop = 1;
-    			nextEntry = i;
-    			break;		
-    		} else if ((lowOpParm == GT && highOpParn == LT) && (key >= lowOpParm && key <= highOpParm)){
-    			scanExecuting = true;
-    			loop = 1;
-    			nextEntry = i;
-    			break; 			
-    		} else if ((highOpParm == LT and key >= highValParm) or (highOpParm == LTE and key >highValParm)){
-    			bufMgr->unPinPage(file, currentPageNum, false);
-    			throw NoSuchKeyFoundException();
-    		} 
-    		//when i is the last one and still not out of loop so its not found in the node
-    		if (i == leafOccupancy - 1) {
-    			bufMgr->unPinPage(file, currentPageNum, false);
-    			if(currentNode->rightSibPageNo != 0){
-    				currentPageNum = currentNode->rightSibPageNo;
-    				bufMgr->readPage(file, currentPageNum, currentPageData)
-    			} else {
-    				throw NoSuchKeyFoundException();
-    			}
-    		}
-    	}
-    	if (loop == 1) {
-    		break;
-    	}
-    }
-    	
-	
-
-
-
-	// // If there is no key in the B+ tree that satisfies the scan criteria,
-	// // throw the exception NoSuchKeyFoundException.
-	// if () {
-	// 	throw NoSuchKeyFoundException();
-	// }
-}
-
-// -----------------------------------------------------------------------------
-// BTreeIndex::scanNext
-//	 * Fetch the record id of the next index entry that matches the scan.
-//	 * Return the next record from current page being scanned. If current page has been scanned to its entirety, 
-//   move on to the right sibling of current page, if any exists, to start scanning that page. 
-//   Make sure to unpin any pages that are no longer required.
-//   * @param outRid	RecordId of next record found that satisfies the scan criteria returned in this
-// -----------------------------------------------------------------------------
-=======
->>>>>>> 93b4f28acd565d5cdf3eacc620f6d82c4e7d9d24
-
-		// Both the high and low values are in a binary form, i.e., for integer
-		// keys, these point to the address of an integer.
-
-<<<<<<< HEAD
-  	if (nextEntry == leafOccupancy) {
-  		bufMgr->unPinPage(file,currentPageNum,false);
-  		if(currentNode->rightSibPageNo == 0) {
-  			throw IndexScanCompletedException();
-  		}
-  		else {
-  		currentPageNum = currrentNode->rightSibPageNo;
-  		bufMgr->readPage(file,currentPageNum, currentPageData)
-  		currentNode = (LeafNodeInt *) currentPageData;
-  		nextEntry = 0;
-  		}
-  	}
-
-  	int key = currentNode->keyArray[nextEntry];
-  	if((lowOpParm == GTE && highOpParm == LTE) && (key >= lowOpParm && key <= highOpParm))  {
-    	outRid = currentNode->keyArray[nextEntry];
-    } else if ((lowOpParm == GTE && highOpParm == LT) && (key >= lowOpParm && key < highOpParm)){
-    	outRid = currentNode->keyArray[nextEntry];		
-    } else if ((lowOpParm == GT && highOpParm == LTE) && (key > lowOpParm && key <= highOpParm)){
-    	outRid = currentNode->keyArray[nextEntry];	
-    } else if ((lowOpParm == GT && highOpParn == LT) && (key >= lowOpParm && key <= highOpParm)){
-    	outRid = currentNode->keyArray[nextEntry];		
-    } else {
-    	throw IndexScanCompletedException();
-    }
-
-    nextEntry++;
-}
-=======
-		// Start from root to find out the leaf page that contains the first RecordID
-		// that satisfies the scan parameters. Keep that page pinned in the buffer pool.
-		bufMgr->readPage(file, rootPageNum, currentPageData);
-		currentPageNum = rootPageNum;
-		// currentNode should start at the ROOT, which should be a NonLeafNode
-		NonLeafNodeInt *currentNode = (NonLeafNodeInt *)currentPageData;
+	// Start from root to find out the leaf page that contains the first RecordID
+	// that satisfies the scan parameters. Keep that page pinned in the buffer pool.
+	bufMgr->readPage(file, rootPageNum, currentPageData);
+	currentPageNum = rootPageNum;
+	// currentNode should start at the ROOT, which should be a NonLeafNode
+	NonLeafNodeInt *currentNode = (NonLeafNodeInt *)currentPageData;
 
 		// use the lowValParm to find the start of the range in the B-Tree
 		// this works because you can only use GT or GTE with the lowValParm
-		while (currentNode->level != 1)
-		{
-			int index = 0;
-			while (true) {
+	while (currentNode->level != 1)
+	{
+		int index = 0;
+		while (true) {
 				// index is past at or past the limit
-				if (index >= nodeOccupancy) {
-					break;
-				}
+			if (index >= nodeOccupancy) {
+				break;
+			}
 				// check if page is valid
 				//                       index or index+1
-				if (currentNode->pageNoArray[index] == Page::INVALID_NUMBER) {
-					break;
-				}
+			if (currentNode->pageNoArray[index] == Page::INVALID_NUMBER) {
+				break;
+			}
 				// check if the lowVal is less than the current key at the index
 				// currrent only works with INTEGERS
-				if (this->lowValInt < currentNode->keyArray[index]) {
-					break;
-				}
-				// increment and run again
-				index++;
+			if (this->lowValInt < currentNode->keyArray[index]) {
+				break;
 			}
+				// increment and run again
+			index++;
+		}
 			// Use the index we found to get the pageNo
-			PageId nextNodePageNum = currentNode->pageNoArray[index];
-			bufMgr->readPage(file, nextNodePageNum, currentPageData);
-			bufMgr->unPinPage(file, nextNodePageNum, false);
-			currentPageNum = nextNodePageNum;
+		PageId nextNodePageNum = currentNode->pageNoArray[index];
+		bufMgr->readPage(file, nextNodePageNum, currentPageData);
+		bufMgr->unPinPage(file, nextNodePageNum, false);
+		currentPageNum = nextNodePageNum;
 
 			// go to next node
-			currentNode = (NonLeafNodeInt *)currentPageData;
+		currentNode = (NonLeafNodeInt *)currentPageData;
 		}
 >>>>>>> 93b4f28acd565d5cdf3eacc620f6d82c4e7d9d24
 
