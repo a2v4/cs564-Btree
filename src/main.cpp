@@ -74,6 +74,8 @@ void test2();
 void test3();
 void test4();
 void test5();
+//void test6();
+void test7();
 void errorTests();
 void deleteRelation();
 
@@ -140,6 +142,8 @@ int main(int argc, char **argv)
 	test3();
 	test4();
 	test5();
+	//test6();
+	test7();
 	errorTests();
 
 	delete bufMgr;
@@ -197,7 +201,7 @@ void test5()
 	std::cout << "--------------------" << std::endl;
 	std::cout << "searchKeyScenario5000" << std::endl;
 	createRelationForward(); //this scenario also give 5000 consecutive number, can Andrew or Shruti check if we need to change anything?
-	indexTestsSearch()
+	indexTestsSearch();
 	deleteRelation();
 }
 
@@ -211,10 +215,58 @@ void test6()
 
 void test7()
 {
+	//Create a sparse relation with size of 3000
 	std::cout << "--------------------" << std::endl;
 	std::cout << "SparseRelationswithSize" << std::endl;
-	createRelationRandom();
+	createRelationSparse(3000);
+	indexTests();
 	deleteRelation();
+}
+// -----------------------------------------------------------------------------
+// createRelationSparse
+// -----------------------------------------------------------------------------
+
+void createRelationSparse(int size)
+{
+	std::vector<RecordId> ridVec;
+  // destroy any old copies of relation file
+	try
+	{
+		File::remove(relationName);
+	}
+	catch(const FileNotFoundException &e)
+	{
+	}
+
+  file1 = new PageFile(relationName, true);
+
+  // initialize all of record1.s to keep purify happy
+  memset(record1.s, ' ', sizeof(record1.s));
+	PageId new_page_number;
+  Page new_page = file1->allocatePage(new_page_number);
+  std::srand(std::time(nullptr));
+  for(int i = 0; i < size; i++ ){
+	int j = rand();
+    sprintf(record1.s, "%05d string record", j);
+    record1.i = j;
+    record1.d = (double)j;
+    std::string new_data(reinterpret_cast<char*>(&record1), sizeof(record1));
+
+		while(1)
+		{
+			try
+			{
+    		new_page.insertRecord(new_data);
+				break;
+			}
+			catch(const InsufficientSpaceException &e)
+			{
+				file1->writePage(new_page_number, new_page);
+  			new_page = file1->allocatePage(new_page_number);
+			}
+		}
+  }
+	file1->writePage(new_page_number, new_page);
 }
 // -----------------------------------------------------------------------------
 // createRelationLargeSize
