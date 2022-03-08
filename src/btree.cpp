@@ -164,7 +164,7 @@ namespace badgerdb
 	void BTreeIndex::traverse(NonLeafNodeInt* root, RIDKeyPair<int> pair, int currLevel) {
 
 		bool isLeaf = false;
-		if(currLevel == this->height - 1) {
+		if(currLevel == this->height - 2) { // ehight - 2, because we have to be standing at internal parent node, to insert at the leaf 
 			isLeaf = true;
 		}
 		for (int i = INTARRAYNONLEAFSIZE - 1; i >= 0; i--)
