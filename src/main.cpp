@@ -184,13 +184,13 @@ void test3()
 	deleteRelation();
 }
 
-// Can Andrew or Shruti check this, I'm not sure how big is large ? this is 2 x relationsize
+// Can Andrew or Shruti check this, I'm not sure how big is large ? someone says in piazza @499 @554 700,000
 void test4()
 {
 	// Create a relation with tuples valued 0 to a Large Size to force the non-leaf node split
 	std::cout << "--------------------" << std::endl;
 	std::cout << "createRelationLargeSize" << std::endl;
-	createRelationLargeSize(10000);
+	createRelationLargeSize(700000);
 	indexTests();
 	deleteRelation();
 }
@@ -219,7 +219,7 @@ void test7()
 	std::cout << "--------------------" << std::endl;
 	std::cout << "SparseRelationswithSize" << std::endl;
 	createRelationSparse(3000);
-	indexTests();
+	//indexTests(); can't do index test since its not randomize number? how can we test it then ?
 	deleteRelation();
 }
 // -----------------------------------------------------------------------------
