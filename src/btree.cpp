@@ -583,7 +583,7 @@ void BTreeIndex::startScan(const void *lowValParm,
 		}
 		else if ((this->lowOp == GT && this->highOp == LTE) && (key > this->lowOp && key <= this->highOp))
 		{
-			outRid = key
+			outRid = key;
 		}
 		else if ((this->lowOp == GT && this->highOp == LT) && (key >= this->lowOp && key <= this->highOp))
 		{
