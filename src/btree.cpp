@@ -46,6 +46,7 @@ namespace badgerdb
 		this->headerPageNum = (PageId)-1;
 		this->scanExecuting = false;
 		this->nextEntry = -1;
+		this->height = 1;
 
 		// Check to see if the corresponding index file exists. If so, open the file.
 		// If not, create it
@@ -155,16 +156,21 @@ namespace badgerdb
 			// non-leaf node, so we have to find the correct leaf to insert entry into
 			//we have to traverse down the tree
 			NonLeafNodeInt *currNode = (NonLeafNodeInt *)currPage;
-			traverse(currNode, pair);
+			traverse(currNode, pair, 0);
 		}
 	}
 
-	void BTreeIndex::traverse(NonLeafNodeInt* root, RIDKeyPair<int> pair) {
-		
-		for(int i = INTARRAYNONLEAFSIZE - 1 ; i >= 0; i--){
-			if(pair.key > root->keyArray[i]){
-				//pointer to the right of curr key
-				if(root->pageNoArray[i+1] == /*is leaf*/) { //if leaf, insert
+
+	void BTreeIndex::traverse(NonLeafNodeInt* root, RIDKeyPair<int> pair, int currLevel) {
+
+		bool isLeaf = false;
+		if(currLevel == this->height - 1) {
+			isLeaf = true;
+		}
+		for (int i = INTARRAYNONLEAFSIZE - 1; i >= 0; i--)
+		{
+			if(pair.key > root->keyArray[i]){//if key value > current key, insert at right of curr key
+				if(isLeaf) { //if leaf, insert
 					Page *leaf;
 					bufMgr->readPage(file, root->pageNoArray[i + 1], leaf);
 					LeafNodeInt *leafNode = (LeafNodeInt *)leaf;
@@ -176,12 +182,11 @@ namespace badgerdb
 						Page *nonLeaf;
 						bufMgr->readPage(file, root->pageNoArray[child], nonLeaf);
 						NonLeafNodeInt *nonLeafNode = (NonLeafNodeInt *)nonLeaf;
-						traverse(nonLeafNode, pair);
+						traverse(nonLeafNode, pair, currLevel + 1);
 					}
 				}
-			} else if(pair.key >= root->keyArray[i]) {
-				//pointer to the left of curr key
-					if(root->pageNoArray[i] == /*is leaf*/) { //if leaf, insert
+			} else if(pair.key >= root->keyArray[i]) {//if key value < current key, insert at left of curr key
+					if(root->pageNoArray[i] == isLeaf) { //if leaf, insert
 					Page *leaf;
 					bufMgr->readPage(file, root->pageNoArray[i], leaf);
 					LeafNodeInt *leafNode = (LeafNodeInt *)leaf;
@@ -193,7 +198,7 @@ namespace badgerdb
 						Page *nonLeaf;
 						bufMgr->readPage(file, root->pageNoArray[child], nonLeaf);
 						NonLeafNodeInt *nonLeafNode = (NonLeafNodeInt *)nonLeaf;
-						traverse(nonLeafNode, pair);
+						traverse(nonLeafNode, pair, currLevel + 1);
 					}
 				}
 
@@ -269,6 +274,7 @@ namespace badgerdb
 
 	void BTreeIndex::splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair, int occupancy)
 	{
+		
 		// create new leafNode
 		LeafNodeInt *newNode = new LeafNodeInt;
 		
@@ -299,7 +305,9 @@ namespace badgerdb
 		}
 		// create new root which will be a Non leaf node
 		NonLeafNodeInt *newInternalNode = new NonLeafNodeInt;
-		nodeOccupancy = 0;
+		newInternalNode->level = 1;
+		this->height++;
+
 		// alloc new page for new non leaf node
 		Page *newPage;
 		PageId newPageId;
@@ -308,6 +316,7 @@ namespace badgerdb
 		// connect curr node to new leaf node
 		currNode->rightSibPageNo = newPageId;
 		int leftmostKey = newNode->keyArray[0];
+
 		// copy up leftmost key on new node up to the root
 		insertToNonLeaf(newInternalNode, newPageId, leftmostKey);
 	}
@@ -345,8 +354,8 @@ namespace badgerdb
 
 		// create new root which will be a Non leaf node
 		NonLeafNodeInt *newInternalNode = new NonLeafNodeInt;
-		nodeOccupancy = 0;
-
+		newInternalNode->level = currNode->level - 1;
+		this->height++;
 		// alloc new page for new non leaf node
 		Page *newPage;
 		PageId newPageId;

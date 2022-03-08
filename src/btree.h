@@ -228,8 +228,9 @@ class BTreeIndex {
    */
 	int			nodeOccupancy;
 
+  int     height;
 
-	// MEMBERS SPECIFIC TO SCANNING
+  // MEMBERS SPECIFIC TO SCANNING
 
   /**
    * True if an index scan has been started.
@@ -338,12 +339,13 @@ class BTreeIndex {
 
   void insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key);
 
-  void traverse(NonLeafNodeInt* root, RIDKeyPair<int> pair);
+  void traverse(NonLeafNodeInt* root, RIDKeyPair<int> pair, int currLevel);
 
   void sortedLeafEntry(LeafNodeInt *currNode, RIDKeyPair<int> pair, int occupancy);
 
   void sortedNonLeafEntry(NonLeafNodeInt* currNode, int key, int occupancy);
 
+  
   /**
    * Begin a filtered scan of the index.  For instance, if the method is called
    * using ("a",GT,"d",LTE) then we should seek all entries with a value
