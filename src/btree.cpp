@@ -780,19 +780,19 @@ namespace badgerdb
 		int key = currentNode->keyArray[nextEntry];
 		if ((this->lowOp == GTE && this->highOp == LTE) && (key >= this->lowOp && key <= this->highOp))
 		{
-			outRid = key;
+			outRid = currentNode->ridArray[nextEntry];
 		}
 		else if ((this->lowOp == GTE && this->highOp == LT) && (key >= this->lowOp && key < this->highOp))
 		{
-			outRid = key;
+			outRid = currentNode->ridArray[nextEntry];
 		}
 		else if ((this->lowOp == GT && this->highOp == LTE) && (key > this->lowOp && key <= this->highOp))
 		{
-			outRid = key;
+			outRid = currentNode->ridArray[nextEntry];
 		}
 		else if ((this->lowOp == GT && this->highOp == LT) && (key >= this->lowOp && key <= this->highOp))
 		{
-			outRid = key;
+			outRid = currentNode->ridArray[nextEntry];
 		}
 		else
 		{
