@@ -93,6 +93,10 @@ namespace badgerdb
 
 			// initialize root
 			NonLeafNodeInt *root = (NonLeafNodeInt *)rootPage;
+			for (int i = 0; i < nodeOccupancy; i++) {
+				root->keyArray[i] = INT32_MAX; // Piazza @381
+				root->pageNoArray[i] = Page::INVALID_NUMBER;
+			}
 
 			// insert entries for every tuple in the base relation using FileScan class.
 			FileScan *scanner = new FileScan(relationName, bufMgrIn);
@@ -105,8 +109,8 @@ namespace badgerdb
 					scanner->scanNext(recordId);
 					const char *currRecordStr = currRecord.c_str();
 					// cast to INT to make key compatible in the future
-					int *key = *((int *)(currRecordStr + attrByteOffset));
-					insertEntry(key, recordId)
+					int *key = (int *)(currRecordStr + attrByteOffset);
+					insertEntry(key, recordId);
 				}
 				catch (EndOfFileException &e)
 				{
@@ -155,11 +159,11 @@ namespace badgerdb
 		bool isRootALeaf = metaInfo->isRootALeaf;
 		if (isRootALeaf == true)
 		{
-			insertToLeaf(_key, rid, rootPageNum)
+			insertToLeaf(_key, rid, rootPageNum);
 		}
 		else
 		{
-			insertToNonLeaf(_key, rid, rootPageNum)
+			insertToNonLeaf(_key, rid, rootPageNum);
 		}
 		// Unpin and flush to disk
 		bufMgr->unPinPage(file, rootPageNum, true);
@@ -177,11 +181,11 @@ namespace badgerdb
 	{
 		if (isLeaf == true)
 		{
-			insertToLeaf(_key, rid, pageNo)
+			insertToLeaf(_key, rid, pageNo);
 		}
 		else
 		{
-			insertToNonLeaf(_key, rid, pageNo)
+			insertToNonLeaf(_key, rid, pageNo);
 		}
 	}
 
@@ -267,7 +271,7 @@ namespace badgerdb
 		// make sure index is less than leaf occupancy limit
 		// check if KEY is larger than the current one we are at
 		// check if the page_number is valid for that entry at that index
-		while (indexToInsertAt < leafOccupancy && key > currNonLeafNode->keyArray[indexToInsertAt] && currNonLeafNode->ridArray[indexToInsertAt].page_number != Page::INVALID_NUMBER)
+		while (indexToInsertAt < leafOccupancy && key > currNonLeafNode->keyArray[indexToInsertAt] && currNonLeafNode->pageNoArray[indexToInsertAt] != Page::INVALID_NUMBER)
 		{
 			// increment until we find a spot to insert our <rid, key> pair
 			indexToInsertAt++;
