@@ -66,8 +66,15 @@ namespace badgerdb
 			bufMgr->readPage(file, headerPageNum, headerPage);
 			IndexMetaInfo *metaInfoPage = (IndexMetaInfo *)headerPage;
 			rootPageNum = metaInfoPage->rootPageNo;
+
 			// unpin page, and its not dirty because we only READ from it
 			bufMgr->unPinPage(file, headerPageNum, false);
+
+			// throws BadIndexInfoException if the index file already exists for the corresponding attribute, but values in metapage do not match
+			if (relationName.compare(metaInfoPage->relationName) != 0 || metaInfoPage->attrType != this->attributeType || metaInfoPage->attrByteOffset != this->attrByteOffset)
+			{
+				throw BadIndexInfoException();
+			}
 		}
 		else
 		{
@@ -93,10 +100,12 @@ namespace badgerdb
 
 			// initialize root
 			NonLeafNodeInt *root = (NonLeafNodeInt *)rootPage;
-			for (int i = 0; i < nodeOccupancy; i++) {
+			for (int i = 0; i < nodeOccupancy; i++)
+			{
 				root->keyArray[i] = INT32_MAX; // Piazza @381
 				root->pageNoArray[i] = Page::INVALID_NUMBER;
 			}
+			root->level = 1;
 
 			// insert entries for every tuple in the base relation using FileScan class.
 			FileScan *scanner = new FileScan(relationName, bufMgrIn);
@@ -326,7 +335,7 @@ namespace badgerdb
 	void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
 	{
 		// int occupancy = sizeof(currNode->keyArray) / sizeof(currNode->keyArray[0]);
-		
+
 		Page *currPage;
 		bufMgr->readPage(file, pageid, currPage);
 		LeafNodeInt *currNodeLeaf = (LeafNodeInt *)currPage;
@@ -359,7 +368,7 @@ namespace badgerdb
 		Page *currPage;
 		bufMgr->readPage(file, pageid, currPage);
 		NonLeafNodeInt *currNonLeafNode = (NonLeafNodeInt *)currPage;
-		
+
 		int occupancy = 0;
 		// make sure index is less than leaf occupancy limit
 		// check if the page_number is valid for that entry at that index
@@ -426,7 +435,7 @@ namespace badgerdb
 
 		// copy up leftmost key on new node up to the root
 		insertToNonLeaf(newInternalNode, newPageId, leftmostKey);
-		
+
 		// unpin pages
 		bufMgr->unPinPage(file, newPageId, true);
 	}
@@ -505,7 +514,7 @@ namespace badgerdb
 		{
 			endScan();
 		}
-		
+
 		if ((highOpParm != LTE && highOpParm != LT) || (lowOpParm != GTE && lowOpParm != GT))
 		{
 			throw BadOpcodesException();
