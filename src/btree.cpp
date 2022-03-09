@@ -426,6 +426,9 @@ namespace badgerdb
 
 		// copy up leftmost key on new node up to the root
 		insertToNonLeaf(newInternalNode, newPageId, leftmostKey);
+		
+		// unpin pages
+		bufMgr->unPinPage(file, newPageId, true);
 	}
 
 	void BTreeIndex::splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key)
@@ -460,7 +463,7 @@ namespace badgerdb
 
 		// create new root which will be a Non leaf node
 		NonLeafNodeInt *newInternalNode = new NonLeafNodeInt;
-		newInternalNode->level = currNode->level - 1;
+		newInternalNode->level = currNode->level + 1;
 		// alloc new page for new non leaf node
 		Page *newPage;
 		PageId newPageId;
@@ -469,30 +472,8 @@ namespace badgerdb
 
 		// copy up leftmost key on new node up to the root
 		insertToNonLeaf(newInternalNode, newPageId, leftmostKey);
-	}
-
-	void BTreeIndex::splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
-	{
-		// create new leafNode
-		LeafNodeInt *newNode = new LeafNodeInt;
-		// copy half the keys from previous node to this one
-		newNode->keyArray[0] = pair.key;
-		newNode->ridArray[0] = pair.rid;
-		int sizeOfNewNode = 1;
-		for (int i = leafOccupancy - 1; i > leafOccupancy / 2; i--)
-		{
-			newNode->keyArray[sizeOfNewNode] = currNode->keyArray[i];
-			newNode->ridArray[sizeOfNewNode] = currNode->ridArray[i];
-			sizeOfNewNode++;
-		}
-
-		// connect currNode to new Node
-		currNode->rightSibPageNo = pageid;
-
-		// create new root which will be a Non leaf node
-		NonLeafNodeInt *newInternalNode = new NonLeafNodeInt;
-		// copy up leftmost key on new node up to the root
-		newInternalNode->keyArray[0] = newNode->keyArray[0];
+		// UNPIN HERE?
+		bufMgr->unPinPage(file, newPageId, true);
 	}
 
 	// -----------------------------------------------------------------------------
