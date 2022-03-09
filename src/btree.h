@@ -342,6 +342,8 @@ class BTreeIndex {
 
   void insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
 
+  void insertToLeaf(RIDKeyPair<int> pair, PageId pageNo);
+
   void insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key);
 
   void traverse(NonLeafNodeInt *root, RIDKeyPair<int> pair, int currLevel);

@@ -93,6 +93,10 @@ namespace badgerdb
 
 			// initialize root
 			NonLeafNodeInt *root = (NonLeafNodeInt *)rootPage;
+			for (int i = 0; i < nodeOccupancy; i++) {
+				root->keyArray[i] = INT32_MAX; // Piazza @381
+				root->pageNoArray[i] = Page::INVALID_NUMBER;
+			}
 
 			// insert entries for every tuple in the base relation using FileScan class.
 			FileScan *scanner = new FileScan(relationName, bufMgrIn);
@@ -105,7 +109,7 @@ namespace badgerdb
 					scanner->scanNext(recordId);
 					const char *currRecordStr = currRecord.c_str();
 					// cast to INT to make key compatible in the future
-					int *key = *((int *)(currRecordStr + attrByteOffset));
+					int *key = (int *)(currRecordStr + attrByteOffset);
 					insertEntry(key, recordId);
 				}
 				catch (EndOfFileException &e)
@@ -160,7 +164,7 @@ namespace badgerdb
 		}
 		else
 		{
-			insertToNonLeaf(pair, rootPageNum)
+			insertToNonLeaf(pair, rootPageNum);
 		}
 		// Unpin and flush to disk
 		bufMgr->unPinPage(file, rootPageNum, true);
