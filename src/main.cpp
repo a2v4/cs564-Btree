@@ -73,6 +73,7 @@ void indexTests();
 void createRelationLargeSize(int size);
 void createRelationSparse(int size);
 void indexTestsSearch();
+void intTestsSearch();
 void test1();
 void test2();
 void test3();
