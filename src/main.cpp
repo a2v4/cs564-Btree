@@ -69,6 +69,9 @@ void createRelationRandom();
 void intTests();
 int intScan(BTreeIndex *index, int lowVal, Operator lowOp, int highVal, Operator highOp);
 void indexTests();
+void createRelationLargeSize(int size);
+void createRelationSparse(int size);
+void indexTestsSearch();
 void test1();
 void test2();
 void test3();
@@ -244,7 +247,7 @@ void createRelationSparse(int size)
   memset(record1.s, ' ', sizeof(record1.s));
 	PageId new_page_number;
   Page new_page = file1->allocatePage(new_page_number);
-  std::srand(std::time(nullptr));
+  std::srand(time(NULL));
   for(int i = 0; i < size; i++ ){
 	int j = rand();
     sprintf(record1.s, "%05d string record", j);
