@@ -505,18 +505,12 @@ namespace badgerdb
 		{
 			endScan();
 		}
-		// BadOpcodesException takes higher precedence over BadScanrangeException
-		// only support GT and GTE here
-		if (lowOpParm != GT || lowOpParm != GTE)
+		
+		if ((highOpParm != LTE && highOpParm != LT) || (lowOpParm != GTE && lowOpParm != GT))
 		{
 			throw BadOpcodesException();
 		}
 		this->lowOp = lowOpParm;
-		// only support LT and LTE here
-		if (highOpParm != LT || highOpParm != LTE)
-		{
-			throw BadOpcodesException();
-		}
 		this->highOp = highOpParm;
 
 		// store scan settings into instance
