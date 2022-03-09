@@ -128,6 +128,14 @@ struct IndexMetaInfo{
    * Page number of root page of the B+ Tree inside the file index file.
    */
 	PageId rootPageNo;
+
+  /**
+   * 
+   * @brief boolean to indicate whether or not the root node is a leaf or not.
+   * 
+   * Piazza post @377
+   */
+  bool isRootALeaf;
 };
 
 /*
@@ -228,8 +236,7 @@ class BTreeIndex {
    */
 	int			nodeOccupancy;
 
-
-	// MEMBERS SPECIFIC TO SCANNING
+  // MEMBERS SPECIFIC TO SCANNING
 
   /**
    * True if an index scan has been started.
@@ -318,26 +325,32 @@ class BTreeIndex {
 	 * */
 	~BTreeIndex();
 
-
   /**
-	 * Insert a new entry using the pair <value,rid>. 
-	 * Start from root to recursively find out the leaf to insert the entry in. The insertion may cause splitting of leaf node.
-	 * This splitting will require addition of new leaf page number entry into the parent non-leaf, which may in-turn get split.
-	 * This may continue all the way upto the root causing the root to get split. If root gets split, metapage needs to be changed accordingly.
-	 * Make sure to unpin pages as soon as you can.
+   * Insert a new entry using the pair <value,rid>.
+   * Start from root to recursively find out the leaf to insert the entry in. The insertion may cause splitting of leaf node.
+   * This splitting will require addition of new leaf page number entry into the parent non-leaf, which may in-turn get split.
+   * This may continue all the way upto the root causing the root to get split. If root gets split, metapage needs to be changed accordingly.
+   * Make sure to unpin pages as soon as you can.
    * @param key			Key to insert, pointer to integer/double/char string
    * @param rid			Record ID of a record whose entry is getting inserted into the index.
-	**/
-	void insertEntry(const void* key, const RecordId rid);
+   **/
+  void insertEntry(const void *key, const RecordId rid);
 
-  void splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
+  void splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair, int occupancy);
 
-  void splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key);
+  void splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key, int occupancy);
 
   void insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
 
   void insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key);
 
+  void traverse(NonLeafNodeInt *root, RIDKeyPair<int> pair, int currLevel);
+
+  void traverse(Page *currPage, RIDKeyPair<int> pair, int currLevel, bool isLeaf);
+
+  void sortedLeafEntry(LeafNodeInt *currNode, RIDKeyPair<int> pair, int occupancy);
+
+  void sortedNonLeafEntry(NonLeafNodeInt *currNode, int key, int occupancy);
 
   /**
    * Begin a filtered scan of the index.  For instance, if the method is called
@@ -358,7 +371,8 @@ class BTreeIndex {
 
   /**
 	 * Fetch the record id of the next index entry that matches the scan.
-	 * Return the next record from current page being scanned. If current page has been scanned to its entirety, move on to the right sibling of current page, if any exists, to start scanning that page. Make sure to unpin any pages that are no longer required.
+	 * Return the next record from current page being scanned. If current page has been scanned to its entirety, move on to the right sibling of current page, if any exists, to start scanning that page. 
+   * Make sure to unpin any pages that are no longer required.
    * @param outRid	RecordId of next record found that satisfies the scan criteria returned in this
 	 * @throws ScanNotInitializedException If no scan has been initialized.
 	 * @throws IndexScanCompletedException If no more records, satisfying the scan criteria, are left to be scanned.
