@@ -18,21 +18,7 @@
 
 //#define DEBUG
 
-<<<<<<< HEAD
-namespace badgerdb {
-
-// -----------------------------------------------------------------------------
-// BTreeIndex::BTreeIndex -- Constructor
-// -----------------------------------------------------------------------------
-
-BTreeIndex::BTreeIndex(const std::string &relationName,
-					   std::string &outIndexName,
-					   BufMgr *bufMgrIn,
-					   const int attrByteOffset,
-					   const Datatype attrType)
-=======
 namespace badgerdb
->>>>>>> 93b4f28acd565d5cdf3eacc620f6d82c4e7d9d24
 {
 
 	// -----------------------------------------------------------------------------
@@ -45,37 +31,6 @@ namespace badgerdb
 						   const int attrByteOffset,
 						   const Datatype attrType)
 	{
-<<<<<<< HEAD
-		// File not found, so create it
-		file = new BlobFile(outIndexName, true);
-		Page *headerPage;
-		bufMgrIn->allocPage(file, headerPageNum, headerPage);
-		// insert metadata in header page
-		IndexMetaInfo *metaInfoPage = (IndexMetaInfo *)headerPage;
-
-		// copy relationName into the metaInfoPage
-		strcpy(metaInfoPage->relationName, relationName.c_str());
-		metaInfoPage->attrByteOffset = attrByteOffset;
-		metaInfoPage->attrType = attrType;
-		metaInfoPage->rootPageNo = rootPageNum;
-		// save meta info in the headerPage
-		memcpy(headerPage, metaInfoPage, sizeof(metaInfoPage));
-		// unpin page, and mark dirty because we wrote the meta info to the header page
-		bufMgr->unPinPage(file, headerPageNum, true);
-
-		// init root page for use
-		Page *rootPage;
-		bufMgrIn->allocPage(file, rootPageNum, rootPage);
-
-		// initialize root
-		LeafNodeInt *root = (LeafNodeInt *)rootPage;
-
-		// insert entries for every tuple in the base relation using FileScan class.
-		FileScan *scanner = new FileScan(relationName, bufMgrIn);
-		std::string currRecord = scanner->getRecord();
-		RecordId recordId;
-		while (true)
-=======
 		std::ostringstream idxStr;
 		idxStr << relationName << '.' << attrByteOffset;
 		outIndexName = idxStr.str();
@@ -95,7 +50,6 @@ namespace badgerdb
 		// Check to see if the corresponding index file exists. If so, open the file.
 		// If not, create it
 		if (BlobFile::exists(outIndexName) == true)
->>>>>>> 93b4f28acd565d5cdf3eacc620f6d82c4e7d9d24
 		{
 			// File found, so use it
 			file = new BlobFile(outIndexName, false);
@@ -183,29 +137,8 @@ namespace badgerdb
 	void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 	{
 
-<<<<<<< HEAD
-// -----------------------------------------------------------------------------
-// BTreeIndex::insertEntry
-// -----------------------------------------------------------------------------
-/**
- * Insert a new entry using the pair <value,rid>.
- * Start from root to recursively find out the leaf to insert the entry in. The insertion may cause splitting of leaf node.
- * This splitting will require addition of new leaf page number entry into the parent non-leaf, which may in-turn get split.
- * This may continue all the way upto the root causing the root to get split. If root gets split, metapage needs to be changed accordingly.
- * Make sure to unpin pages as soon as you can.
- * @param key			Key to insert, pointer to integer/double/char string
- * @param rid			Record ID of a record whose entry is getting inserted into the index.
- **/
-
-void BTreeIndex::insertEntry(const void *key, const RecordId rid)
-{
-
-	RIDKeyPair<int> pair;
-	pair.set(rid, (*((int *)key)));
-=======
 		RIDKeyPair<int> pair;
 		pair.set(rid, (*((int *)key)));
->>>>>>> 93b4f28acd565d5cdf3eacc620f6d82c4e7d9d24
 
 		// compare page number equal to starting root page number, if true, then leaf else non-leaf node
 		// if leaf node, make helper for insert in leaf Node
@@ -225,11 +158,6 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 
 	void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
 	{
-<<<<<<< HEAD
-		// non-leaf node
-		NonLeafNodeInt *currNode;
-		insertToNonLeaf(currNode, currentPageNum, pair);
-=======
 		if (leafOccupancy == INTARRAYLEAFSIZE)
 		{
 			splitLeaf(currNode, pageid, pair);
@@ -253,17 +181,8 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 			currNode->ridArray[i] = pair.rid;
 			leafOccupancy++;
 		}
->>>>>>> 93b4f28acd565d5cdf3eacc620f6d82c4e7d9d24
 	}
 
-<<<<<<< HEAD
-void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
-{
-	if (leafOccupancy == INTARRAYLEAFSIZE)
-	{
-		splitChild(currNode, pageid, pair);
-		currNode->rightSibPageNo = pageid;
-=======
 	void BTreeIndex::insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key)
 	{
 		if (nodeOccupancy == INTARRAYNONLEAFSIZE)
@@ -287,7 +206,6 @@ void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<i
 			currNode->keyArray[i] = key;
 			nodeOccupancy++;
 		}
->>>>>>> 93b4f28acd565d5cdf3eacc620f6d82c4e7d9d24
 	}
 
 	void BTreeIndex::splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
