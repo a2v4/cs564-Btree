@@ -453,7 +453,7 @@ namespace badgerdb
 	void BTreeIndex::splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
 	{
 		// create new leafNode
-		LeafNodeInt *newNode;
+		LeafNodeInt *newNode = new LeafNodeInt;
 		// copy half the keys from previous node to this one
 		newNode->keyArray[0] = pair.key;
 		newNode->ridArray[0] = pair.rid;
@@ -469,7 +469,7 @@ namespace badgerdb
 		currNode->rightSibPageNo = pageid;
 
 		// create new root which will be a Non leaf node
-		NonLeafNodeInt *newInternalNode;
+		NonLeafNodeInt *newInternalNode = new NonLeafNodeInt;
 		// copy up leftmost key on new node up to the root
 		newInternalNode->keyArray[0] = newNode->keyArray[0];
 	}
