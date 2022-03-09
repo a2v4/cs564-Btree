@@ -20,370 +20,395 @@
 namespace badgerdb
 {
 
-/**
- * @brief Datatype enumeration type.
- */
-enum Datatype
-{
-	INTEGER = 0,
-	DOUBLE = 1,
-	STRING = 2
-};
-
-/**
- * @brief Scan operations enumeration. Passed to BTreeIndex::startScan() method.
- */
-enum Operator
-{ 
-	LT, 	/* Less Than */
-	LTE,	/* Less Than or Equal to */
-	GTE,	/* Greater Than or Equal to */
-	GT		/* Greater Than */
-};
-
-
-/**
- * @brief Number of key slots in B+Tree leaf for INTEGER key.
- */
-//                                                  sibling ptr             key               rid
-const  int INTARRAYLEAFSIZE = ( Page::SIZE - sizeof( PageId ) ) / ( sizeof( int ) + sizeof( RecordId ) );
-
-/**
- * @brief Number of key slots in B+Tree non-leaf for INTEGER key.
- */
-//                                                     level     extra pageNo                  key       pageNo
-const  int INTARRAYNONLEAFSIZE = ( Page::SIZE - sizeof( int ) - sizeof( PageId ) ) / ( sizeof( int ) + sizeof( PageId ) );
-
-/**
- * @brief Structure to store a key-rid pair. It is used to pass the pair to functions that 
- * add to or make changes to the leaf node pages of the tree. Is templated for the key member.
- */
-template <class T>
-class RIDKeyPair{
-public:
-	RecordId rid;
-	T key;
-	void set( RecordId r, T k)
-	{
-		rid = r;
-		key = k;
-	}
-};
-
-/**
- * @brief Structure to store a key page pair which is used to pass the key and page to functions that make 
- * any modifications to the non leaf pages of the tree.
-*/
-template <class T>
-class PageKeyPair{
-public:
-	PageId pageNo;
-	T key;
-	void set( int p, T k)
-	{
-		pageNo = p;
-		key = k;
-	}
-};
-
-/**
- * @brief Overloaded operator to compare the key values of two rid-key pairs
- * and if they are the same compares to see if the first pair has
- * a smaller rid.pageNo value.
-*/
-template <class T>
-bool operator<( const RIDKeyPair<T>& r1, const RIDKeyPair<T>& r2 )
-{
-	if( r1.key != r2.key )
-		return r1.key < r2.key;
-	else
-		return r1.rid.page_number < r2.rid.page_number;
-}
-
-/**
- * @brief The meta page, which holds metadata for Index file, is always first page of the btree index file and is cast
- * to the following structure to store or retrieve information from it.
- * Contains the relation name for which the index is created, the byte offset
- * of the key value on which the index is made, the type of the key and the page no
- * of the root page. Root page starts as page 2 but since a split can occur
- * at the root the root page may get moved up and get a new page no.
-*/
-struct IndexMetaInfo{
   /**
-   * Name of base relation.
+   * @brief Datatype enumeration type.
    */
-	char relationName[20];
+  enum Datatype
+  {
+    INTEGER = 0,
+    DOUBLE = 1,
+    STRING = 2
+  };
 
   /**
-   * Offset of attribute, over which index is built, inside the record stored in pages.
+   * @brief Scan operations enumeration. Passed to BTreeIndex::startScan() method.
    */
-	int attrByteOffset;
+  enum Operator
+  {
+    LT,  /* Less Than */
+    LTE, /* Less Than or Equal to */
+    GTE, /* Greater Than or Equal to */
+    GT   /* Greater Than */
+  };
 
   /**
-   * Type of the attribute over which index is built.
+   * @brief Number of key slots in B+Tree leaf for INTEGER key.
    */
-	Datatype attrType;
+  //                                                  sibling ptr             key               rid
+  const int INTARRAYLEAFSIZE = (Page::SIZE - sizeof(PageId)) / (sizeof(int) + sizeof(RecordId));
 
   /**
-   * Page number of root page of the B+ Tree inside the file index file.
+   * @brief Number of key slots in B+Tree non-leaf for INTEGER key.
    */
-	PageId rootPageNo;
+  //                                                     level     extra pageNo                  key       pageNo
+  const int INTARRAYNONLEAFSIZE = (Page::SIZE - sizeof(int) - sizeof(PageId)) / (sizeof(int) + sizeof(PageId));
 
   /**
-   * 
-   * @brief boolean to indicate whether or not the root node is a leaf or not.
-   * 
-   * Piazza post @377
+   * @brief Structure to store a key-rid pair. It is used to pass the pair to functions that
+   * add to or make changes to the leaf node pages of the tree. Is templated for the key member.
    */
-  bool isRootALeaf;
-};
+  template <class T>
+  class RIDKeyPair
+  {
+  public:
+    RecordId rid;
+    T key;
+    void set(RecordId r, T k)
+    {
+      rid = r;
+      key = k;
+    }
+  };
 
-/*
-Each node is a page, so once we read the page in we just cast the pointer to the page to this struct and use it to access the parts
-These structures basically are the format in which the information is stored in the pages for the index file depending on what kind of 
-node they are. The level memeber of each non leaf structure seen below is set to 1 if the nodes 
-at this level are just above the leaf nodes. Otherwise set to 0.
-*/
-
-/**
- * @brief Structure for all non-leaf nodes when the key is of INTEGER type.
-*/
-struct NonLeafNodeInt{
   /**
-   * Level of the node in the tree.
+   * @brief Structure to store a key page pair which is used to pass the key and page to functions that make
+   * any modifications to the non leaf pages of the tree.
    */
-	int level;
+  template <class T>
+  class PageKeyPair
+  {
+  public:
+    PageId pageNo;
+    T key;
+    void set(int p, T k)
+    {
+      pageNo = p;
+      key = k;
+    }
+  };
 
   /**
-   * Stores keys.
+   * @brief Overloaded operator to compare the key values of two rid-key pairs
+   * and if they are the same compares to see if the first pair has
+   * a smaller rid.pageNo value.
    */
-	int keyArray[ INTARRAYNONLEAFSIZE ];
+  template <class T>
+  bool operator<(const RIDKeyPair<T> &r1, const RIDKeyPair<T> &r2)
+  {
+    if (r1.key != r2.key)
+      return r1.key < r2.key;
+    else
+      return r1.rid.page_number < r2.rid.page_number;
+  }
 
   /**
-   * Stores page numbers of child pages which themselves are other non-leaf/leaf nodes in the tree.
+   * @brief The meta page, which holds metadata for Index file, is always first page of the btree index file and is cast
+   * to the following structure to store or retrieve information from it.
+   * Contains the relation name for which the index is created, the byte offset
+   * of the key value on which the index is made, the type of the key and the page no
+   * of the root page. Root page starts as page 2 but since a split can occur
+   * at the root the root page may get moved up and get a new page no.
    */
-	PageId pageNoArray[ INTARRAYNONLEAFSIZE + 1 ];
-};
+  struct IndexMetaInfo
+  {
+    /**
+     * Name of base relation.
+     */
+    char relationName[20];
 
+    /**
+     * Offset of attribute, over which index is built, inside the record stored in pages.
+     */
+    int attrByteOffset;
 
-/**
- * @brief Structure for all leaf nodes when the key is of INTEGER type.
-*/
-struct LeafNodeInt{
+    /**
+     * Type of the attribute over which index is built.
+     */
+    Datatype attrType;
+
+    /**
+     * Page number of root page of the B+ Tree inside the file index file.
+     */
+    PageId rootPageNo;
+
+    /**
+     *
+     * @brief boolean to indicate whether or not the root node is a leaf or not.
+     *
+     * Piazza post @377
+     */
+    bool isRootALeaf;
+  };
+
+  /*
+  Each node is a page, so once we read the page in we just cast the pointer to the page to this struct and use it to access the parts
+  These structures basically are the format in which the information is stored in the pages for the index file depending on what kind of
+  node they are. The level memeber of each non leaf structure seen below is set to 1 if the nodes
+  at this level are just above the leaf nodes. Otherwise set to 0.
+  */
+
   /**
-   * Stores keys.
+   * @brief Structure for all non-leaf nodes when the key is of INTEGER type.
    */
-	int keyArray[ INTARRAYLEAFSIZE ];
+  struct NonLeafNodeInt
+  {
+    /**
+     * Level of the node in the tree.
+     */
+    int level;
+
+    /**
+     * Stores keys.
+     */
+    int keyArray[INTARRAYNONLEAFSIZE];
+
+    /**
+     * Stores page numbers of child pages which themselves are other non-leaf/leaf nodes in the tree.
+     */
+    PageId pageNoArray[INTARRAYNONLEAFSIZE + 1];
+  };
 
   /**
-   * Stores RecordIds.
+   * @brief Structure for all leaf nodes when the key is of INTEGER type.
    */
-	RecordId ridArray[ INTARRAYLEAFSIZE ];
+  struct LeafNodeInt
+  {
+    /**
+     * Stores keys.
+     */
+    int keyArray[INTARRAYLEAFSIZE];
+
+    /**
+     * Stores RecordIds.
+     */
+    RecordId ridArray[INTARRAYLEAFSIZE];
+
+    /**
+     * Page number of the leaf on the right side.
+     * This linking of leaves allows to easily move from one leaf to the next leaf during index scan.
+     */
+    PageId rightSibPageNo;
+  };
 
   /**
-   * Page number of the leaf on the right side.
-	 * This linking of leaves allows to easily move from one leaf to the next leaf during index scan.
+   * @brief BTreeIndex class. It implements a B+ Tree index on a single attribute of a
+   * relation. This index supports only one scan at a time.
    */
-	PageId rightSibPageNo;
-};
+  class BTreeIndex
+  {
 
+  private:
+    /**
+     * File object for the index file.
+     */
+    File *file;
 
-/**
- * @brief BTreeIndex class. It implements a B+ Tree index on a single attribute of a
- * relation. This index supports only one scan at a time.
-*/
-class BTreeIndex {
+    /**
+     * Buffer Manager Instance.
+     */
+    BufMgr *bufMgr;
 
- private:
+    /**
+     * Page number of meta page.
+     */
+    PageId headerPageNum;
 
-  /**
-   * File object for the index file.
-   */
-	File		*file;
+    /**
+     * page number of root page of B+ tree inside index file.
+     */
+    PageId rootPageNum;
 
-  /**
-   * Buffer Manager Instance.
-   */
-	BufMgr	*bufMgr;
+    /**
+     * Datatype of attribute over which index is built.
+     */
+    Datatype attributeType;
 
-  /**
-   * Page number of meta page.
-   */
-	PageId	headerPageNum;
+    /**
+     * Offset of attribute, over which index is built, inside records.
+     */
+    int attrByteOffset;
 
-  /**
-   * page number of root page of B+ tree inside index file.
-   */
-	PageId	rootPageNum;
+    /**
+     * Number of keys in leaf node, depending upon the type of key.
+     */
+    int leafOccupancy;
 
-  /**
-   * Datatype of attribute over which index is built.
-   */
-	Datatype	attributeType;
+    /**
+     * Number of keys in non-leaf node, depending upon the type of key.
+     */
+    int nodeOccupancy;
 
-  /**
-   * Offset of attribute, over which index is built, inside records. 
-   */
-	int 		attrByteOffset;
+    // MEMBERS SPECIFIC TO SCANNING
 
-  /**
-   * Number of keys in leaf node, depending upon the type of key.
-   */
-	int			leafOccupancy;
+    /**
+     * True if an index scan has been started.
+     */
+    bool scanExecuting;
 
-  /**
-   * Number of keys in non-leaf node, depending upon the type of key.
-   */
-	int			nodeOccupancy;
+    /**
+     * Index of next entry to be scanned in current leaf being scanned.
+     */
+    int nextEntry;
 
-  // MEMBERS SPECIFIC TO SCANNING
+    /**
+     * Page number of current page being scanned.
+     */
+    PageId currentPageNum;
 
-  /**
-   * True if an index scan has been started.
-   */
-	bool		scanExecuting;
+    /**
+     * Current Page being scanned.
+     */
+    Page *currentPageData;
 
-  /**
-   * Index of next entry to be scanned in current leaf being scanned.
-   */
-	int			nextEntry;
+    /**
+     * Low INTEGER value for scan.
+     */
+    int lowValInt;
 
-  /**
-   * Page number of current page being scanned.
-   */
-	PageId	currentPageNum;
+    /**
+     * Low DOUBLE value for scan.
+     */
+    double lowValDouble;
 
-  /**
-   * Current Page being scanned.
-   */
-	Page		*currentPageData;
+    /**
+     * Low STRING value for scan.
+     */
+    std::string lowValString;
 
-  /**
-   * Low INTEGER value for scan.
-   */
-	int			lowValInt;
+    /**
+     * High INTEGER value for scan.
+     */
+    int highValInt;
 
-  /**
-   * Low DOUBLE value for scan.
-   */
-	double	lowValDouble;
+    /**
+     * High DOUBLE value for scan.
+     */
+    double highValDouble;
 
-  /**
-   * Low STRING value for scan.
-   */
-	std::string	lowValString;
+    /**
+     * High STRING value for scan.
+     */
+    std::string highValString;
 
-  /**
-   * High INTEGER value for scan.
-   */
-	int			highValInt;
+    /**
+     * Low Operator. Can only be GT(>) or GTE(>=).
+     */
+    Operator lowOp;
 
-  /**
-   * High DOUBLE value for scan.
-   */
-	double	highValDouble;
+    /**
+     * High Operator. Can only be LT(<) or LTE(<=).
+     */
+    Operator highOp;
 
-  /**
-   * High STRING value for scan.
-   */
-	std::string highValString;
-	
-  /**
-   * Low Operator. Can only be GT(>) or GTE(>=).
-   */
-	Operator	lowOp;
+  public:
+    /**
+     * BTreeIndex Constructor.
+     * Check to see if the corresponding index file exists. If so, open the file.
+     * If not, create it and insert entries for every tuple in the base relation using FileScan class.
+     *
+     * @param relationName        Name of file.
+     * @param outIndexName        Return the name of index file.
+     * @param bufMgrIn						Buffer Manager Instance
+     * @param attrByteOffset			Offset of attribute, over which index is to be built, in the record
+     * @param attrType						Datatype of attribute over which index is built
+     * @throws  BadIndexInfoException     If the index file already exists for the corresponding attribute, but values in metapage(relationName, attribute byte offset, attribute type etc.) do not match with values received through constructor parameters.
+     */
+    BTreeIndex(const std::string &relationName, std::string &outIndexName,
+               BufMgr *bufMgrIn, const int attrByteOffset, const Datatype attrType);
 
-  /**
-   * High Operator. Can only be LT(<) or LTE(<=).
-   */
-	Operator	highOp;
+    /**
+     * BTreeIndex Destructor.
+     * End any initialized scan, flush index file, after unpinning any pinned pages, from the buffer manager
+     * and delete file instance thereby closing the index file.
+     * Destructor should not throw any exceptions. All exceptions should be caught in here itself.
+     * */
+    ~BTreeIndex();
 
-	
- public:
+    /**
+     * Insert a new entry using the pair <value,rid>.
+     * Start from root to recursively find out the leaf to insert the entry in. The insertion may cause splitting of leaf node.
+     * This splitting will require addition of new leaf page number entry into the parent non-leaf, which may in-turn get split.
+     * This may continue all the way upto the root causing the root to get split. If root gets split, metapage needs to be changed accordingly.
+     * Make sure to unpin pages as soon as you can.
+     * @param _key			Key to insert, pointer to integer/double/char string
+     * @param rid			Record ID of a record whose entry is getting inserted into the index.
+     **/
+    void insertEntry(const void *_key, const RecordId rid);
 
-  /**
-   * BTreeIndex Constructor. 
-	 * Check to see if the corresponding index file exists. If so, open the file.
-	 * If not, create it and insert entries for every tuple in the base relation using FileScan class.
-   *
-   * @param relationName        Name of file.
-   * @param outIndexName        Return the name of index file.
-   * @param bufMgrIn						Buffer Manager Instance
-   * @param attrByteOffset			Offset of attribute, over which index is to be built, in the record
-   * @param attrType						Datatype of attribute over which index is built
-   * @throws  BadIndexInfoException     If the index file already exists for the corresponding attribute, but values in metapage(relationName, attribute byte offset, attribute type etc.) do not match with values received through constructor parameters.
-   */
-	BTreeIndex(const std::string & relationName, std::string & outIndexName,
-						BufMgr *bufMgrIn,	const int attrByteOffset,	const Datatype attrType);
-	
+    /**
+     * @brief
+     *
+     * @param key		Key to insert, pointer to integer/double/char string
+     * @param rid		Record ID of a record whose entry is getting inserted into the index.
+     * @param isLeaf 	boolean if dealing with leaf or not
+     * @param pageNo 	page number to work with
+     */
+    void insertEntry(const void *_key, const RecordId rid, bool isLeaf, PageId pageNo);
 
-  /**
-   * BTreeIndex Destructor. 
-	 * End any initialized scan, flush index file, after unpinning any pinned pages, from the buffer manager
-	 * and delete file instance thereby closing the index file.
-	 * Destructor should not throw any exceptions. All exceptions should be caught in here itself. 
-	 * */
-	~BTreeIndex();
+    void splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
 
-  /**
-   * Insert a new entry using the pair <value,rid>.
-   * Start from root to recursively find out the leaf to insert the entry in. The insertion may cause splitting of leaf node.
-   * This splitting will require addition of new leaf page number entry into the parent non-leaf, which may in-turn get split.
-   * This may continue all the way upto the root causing the root to get split. If root gets split, metapage needs to be changed accordingly.
-   * Make sure to unpin pages as soon as you can.
-   * @param key			Key to insert, pointer to integer/double/char string
-   * @param rid			Record ID of a record whose entry is getting inserted into the index.
-   **/
-  void insertEntry(const void *key, const RecordId rid);
+    void splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key);
 
-  void splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair, int occupancy);
+    /**
+     * @brief Insert given <rid, key> pair into a leaf at the given pageNo
+     *
+     * @param key		Key to insert, pointer to integer/double/char string
+     * @param rid		Record ID of a record whose entry is getting inserted into the index.
+     * @param pageNo 	page number where the leaf node is located
+     */
+    void insertToLeaf(const void *_key, const RecordId rid, PageId pageNo);
 
-  void splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key, int occupancy);
+    void insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
 
-  void insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
+    /**
+     * @brief Find page to insert given <rid, key> pair from the given pageNo
+     *
+     * @param key		Key to insert, pointer to integer/double/char string
+     * @param rid		Record ID of a record whose entry is getting inserted into the index.
+     * @param pageNo 	page number where the current node is located
+     */
+    void insertToNonLeaf(const void *_key, const RecordId rid, PageId pageNo);
 
-  void insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key);
+    void insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key);
 
-  void traverse(NonLeafNodeInt *root, RIDKeyPair<int> pair, int currLevel);
+    void sortedLeafEntry(LeafNodeInt *currNode, RIDKeyPair<int> pair);
 
-  void traverse(Page *currPage, RIDKeyPair<int> pair, int currLevel, bool isLeaf);
+    void sortedNonLeafEntry(NonLeafNodeInt *currNode, int key);
 
-  void sortedLeafEntry(LeafNodeInt *currNode, RIDKeyPair<int> pair, int occupancy);
+    void splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
 
-  void sortedNonLeafEntry(NonLeafNodeInt *currNode, int key, int occupancy);
+    /**
+     * Begin a filtered scan of the index.  For instance, if the method is called
+     * using ("a",GT,"d",LTE) then we should seek all entries with a value
+     * greater than "a" and less than or equal to "d".
+     * If another scan is already executing, that needs to be ended here.
+     * Set up all the variables for scan. Start from root to find out the leaf page that contains the first RecordID
+     * that satisfies the scan parameters. Keep that page pinned in the buffer pool.
+     * @param lowVal	Low value of range, pointer to integer / double / char string
+     * @param lowOp		Low operator (GT/GTE)
+     * @param highVal	High value of range, pointer to integer / double / char string
+     * @param highOp	High operator (LT/LTE)
+     * @throws  BadOpcodesException If lowOp and highOp do not contain one of their their expected values
+     * @throws  BadScanrangeException If lowVal > highval
+     * @throws  NoSuchKeyFoundException If there is no key in the B+ tree that satisfies the scan criteria.
+     **/
+    void startScan(const void *lowVal, const Operator lowOp, const void *highVal, const Operator highOp);
 
-  /**
-   * Begin a filtered scan of the index.  For instance, if the method is called
-   * using ("a",GT,"d",LTE) then we should seek all entries with a value
-   * greater than "a" and less than or equal to "d".
-   * If another scan is already executing, that needs to be ended here.
-   * Set up all the variables for scan. Start from root to find out the leaf page that contains the first RecordID
-   * that satisfies the scan parameters. Keep that page pinned in the buffer pool.
-   * @param lowVal	Low value of range, pointer to integer / double / char string
-   * @param lowOp		Low operator (GT/GTE)
-   * @param highVal	High value of range, pointer to integer / double / char string
-   * @param highOp	High operator (LT/LTE)
-   * @throws  BadOpcodesException If lowOp and highOp do not contain one of their their expected values
-   * @throws  BadScanrangeException If lowVal > highval
-   * @throws  NoSuchKeyFoundException If there is no key in the B+ tree that satisfies the scan criteria.
-   **/
-  void startScan(const void *lowVal, const Operator lowOp, const void *highVal, const Operator highOp);
+    /**
+     * Fetch the record id of the next index entry that matches the scan.
+     * Return the next record from current page being scanned. If current page has been scanned to its entirety, move on to the right sibling of current page, if any exists, to start scanning that page.
+     * Make sure to unpin any pages that are no longer required.
+     * @param outRid	RecordId of next record found that satisfies the scan criteria returned in this
+     * @throws ScanNotInitializedException If no scan has been initialized.
+     * @throws IndexScanCompletedException If no more records, satisfying the scan criteria, are left to be scanned.
+     **/
+    void scanNext(RecordId &outRid); // returned record id
 
-  /**
-	 * Fetch the record id of the next index entry that matches the scan.
-	 * Return the next record from current page being scanned. If current page has been scanned to its entirety, move on to the right sibling of current page, if any exists, to start scanning that page. 
-   * Make sure to unpin any pages that are no longer required.
-   * @param outRid	RecordId of next record found that satisfies the scan criteria returned in this
-	 * @throws ScanNotInitializedException If no scan has been initialized.
-	 * @throws IndexScanCompletedException If no more records, satisfying the scan criteria, are left to be scanned.
-	**/
-	void scanNext(RecordId& outRid);  // returned record id
-
-  /**
-   * Terminate the current scan. Unpin any pinned pages. Reset scan specific variables.
-   * @throws ScanNotInitializedException If no scan has been initialized.
-   **/
-  void endScan();
-};
+    /**
+     * Terminate the current scan. Unpin any pinned pages. Reset scan specific variables.
+     * @throws ScanNotInitializedException If no scan has been initialized.
+     **/
+    void endScan();
+  };
 
 }
