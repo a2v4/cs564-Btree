@@ -72,10 +72,6 @@ void indexTests();
 void test1();
 void test2();
 void test3();
-void test4();
-void test5();
-//void test6();
-void test7();
 void errorTests();
 void deleteRelation();
 
@@ -112,6 +108,7 @@ int main(int argc, char **argv)
 
 	}
 	// new_file goes out of scope here, so file is automatically closed.
+
 	{
 		FileScan fscan(relationName, bufMgr);
 
@@ -140,10 +137,6 @@ int main(int argc, char **argv)
 	test1();
 	test2();
 	test3();
-	test4();
-	test5();
-	//test6();
-	test7();
 	errorTests();
 
 	delete bufMgr;
@@ -182,136 +175,6 @@ void test3()
 	createRelationRandom();
 	indexTests();
 	deleteRelation();
-}
-
-// Can Andrew or Shruti check this, I'm not sure how big is large ? someone says in piazza @499 @554 700,000
-void test4()
-{
-	// Create a relation with tuples valued 0 to a Large Size to force the non-leaf node split
-	std::cout << "--------------------" << std::endl;
-	std::cout << "createRelationLargeSize" << std::endl;
-	createRelationLargeSize(700000);
-	indexTests();
-	deleteRelation();
-}
-
-void test5()
-{
-	//search for key from -1000 to 6000
-	std::cout << "--------------------" << std::endl;
-	std::cout << "searchKeyScenario5000" << std::endl;
-	createRelationForward(); //this scenario also give 5000 consecutive number, can Andrew or Shruti check if we need to change anything?
-	indexTestsSearch();
-	deleteRelation();
-}
-
-void test6()
-{
-	std::cout << "--------------------" << std::endl;
-	std::cout << "reopenAnIndexOnExistingOne" << std::endl;
-	createRelationRandom();
-	deleteRelation();
-}
-
-void test7()
-{
-	//Create a sparse relation with size of 3000
-	std::cout << "--------------------" << std::endl;
-	std::cout << "SparseRelationswithSize" << std::endl;
-	createRelationSparse(3000);
-	//indexTests(); can't do index test since its not randomize number? how can we test it then ?
-	deleteRelation();
-}
-// -----------------------------------------------------------------------------
-// createRelationSparse
-// -----------------------------------------------------------------------------
-
-void createRelationSparse(int size)
-{
-	std::vector<RecordId> ridVec;
-  // destroy any old copies of relation file
-	try
-	{
-		File::remove(relationName);
-	}
-	catch(const FileNotFoundException &e)
-	{
-	}
-
-  file1 = new PageFile(relationName, true);
-
-  // initialize all of record1.s to keep purify happy
-  memset(record1.s, ' ', sizeof(record1.s));
-	PageId new_page_number;
-  Page new_page = file1->allocatePage(new_page_number);
-  std::srand(std::time(nullptr));
-  for(int i = 0; i < size; i++ ){
-	int j = rand();
-    sprintf(record1.s, "%05d string record", j);
-    record1.i = j;
-    record1.d = (double)j;
-    std::string new_data(reinterpret_cast<char*>(&record1), sizeof(record1));
-
-		while(1)
-		{
-			try
-			{
-    		new_page.insertRecord(new_data);
-				break;
-			}
-			catch(const InsufficientSpaceException &e)
-			{
-				file1->writePage(new_page_number, new_page);
-  			new_page = file1->allocatePage(new_page_number);
-			}
-		}
-  }
-	file1->writePage(new_page_number, new_page);
-}
-// -----------------------------------------------------------------------------
-// createRelationLargeSize
-// -----------------------------------------------------------------------------
-
-void createRelationLargeSize(int size)
-{
-	std::vector<RecordId> ridVec;
-  // destroy any old copies of relation file
-	try
-	{
-		File::remove(relationName);
-	}
-	catch(const FileNotFoundException &e)
-	{
-	}
-
-  file1 = new PageFile(relationName, true);
-
-  // initialize all of record1.s to keep purify happy
-  memset(record1.s, ' ', sizeof(record1.s));
-	PageId new_page_number;
-  Page new_page = file1->allocatePage(new_page_number);
-  for(int i = 0; i < size; i++ )
-	{
-    sprintf(record1.s, "%05d string record", i);
-    record1.i = i;
-    record1.d = (double)i;
-    std::string new_data(reinterpret_cast<char*>(&record1), sizeof(record1));
-
-		while(1)
-		{
-			try
-			{
-    		new_page.insertRecord(new_data);
-				break;
-			}
-			catch(const InsufficientSpaceException &e)
-			{
-				file1->writePage(new_page_number, new_page);
-  			new_page = file1->allocatePage(new_page_number);
-			}
-		}
-  }
-	file1->writePage(new_page_number, new_page);
 }
 
 // -----------------------------------------------------------------------------
@@ -490,35 +353,6 @@ void indexTests()
   catch(const FileNotFoundException &e)
   {
   }
-}
-
-// -----------------------------------------------------------------------------
-// indexTestsInput
-// -----------------------------------------------------------------------------
-
-void indexTestsSearch()
-{
-  intTestsSearch();
-	try
-	{
-		File::remove(intIndexName);
-	}
-  catch(const FileNotFoundException &e)
-  {
-  }
-}
-
-// -----------------------------------------------------------------------------
-// intTests
-// -----------------------------------------------------------------------------
-
-void intTestsSearch()
-{
-  std::cout << "Create a B+ Tree index on the integer field" << std::endl;
-  BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple,i), INTEGER);
-
-	// run test search key -1000 to 6000
-	checkPassFail(intScan(&index,-1000,GTE,6000,LT), 5000)
 }
 
 // -----------------------------------------------------------------------------

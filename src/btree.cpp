@@ -210,7 +210,6 @@ namespace badgerdb
 
 	void BTreeIndex::splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
 	{
-<<<<<<< HEAD
 		// insert into available page in node
 		currNode->keyArray[leafOccupancy] = pair.key;
 		currNode->ridArray[leafOccupancy] = pair.rid;
