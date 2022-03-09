@@ -446,6 +446,8 @@ namespace badgerdb
 		// copy up leftmost key on new node up to the root
 		insertToNonLeaf(newInternalNode, newPageId, leftmostKey);
 	}
+}
+
 
 	void BTreeIndex::splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key, int occupancy)
 	{
@@ -490,6 +492,34 @@ namespace badgerdb
 		insertToNonLeaf(newInternalNode, newPageId, leftmostKey);
 	}
 
+void BTreeIndex::insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
+{
+}
+
+void BTreeIndex::splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
+{
+	// create new leafNode
+	LeafNodeInt *newNode;
+	// copy half the keys from previous node to this one
+	newNode->keyArray[0] = pair.key;
+	newNode->ridArray[0] = pair.rid;
+	int sizeOfNewNode = 1;
+	for (int i = leafOccupancy - 1; i > leafOccupancy / 2; i--)
+	{
+		newNode->keyArray[sizeOfNewNode] = currNode->keyArray[i];
+		newNode->ridArray[sizeOfNewNode] = currNode->ridArray[i];
+		sizeOfNewNode++;
+	}
+
+	// connect currNode to new Node
+	currNode->rightSibPageNo = pageid;
+
+	// create new root which will be a Non leaf node
+	NonLeafNodeInt *newInternalNode;
+	// copy up leftmost key on new node up to the root
+	newInternalNode->keyArray[0] = newNode->keyArray[0];
+}
+
 	// -----------------------------------------------------------------------------
 	// BTreeIndex::startScan
 	// -----------------------------------------------------------------------------
@@ -509,175 +539,164 @@ namespace badgerdb
 	 * @throws  NoSuchKeyFoundException If there is no key in the B+ tree that satisfies the scan criteria.
 	 **/
 
-	void BTreeIndex::startScan(const void *lowValParm,
-							   const Operator lowOpParm,
-							   const void *highValParm,
-							   const Operator highOpParm)
+void BTreeIndex::startScan(const void *lowValParm,
+						   const Operator lowOpParm,
+						   const void *highValParm,
+						   const Operator highOpParm)
+{
+	// end current scan and get ready to start a new scan
+	if (scanExecuting == true)
 	{
-		// end current scan and get ready to start a new scan
-		if (scanExecuting == true)
-		{
-			endScan();
+		endScan();
 		}
 		// BadOpcodesException takes higher precedence over BadScanrangeException
 		// only support GT and GTE here
-		if (lowOpParm != GT || lowOpParm != GTE)
+	if (lowOpParm != GT || lowOpParm != GTE)
 		{
-			throw BadOpcodesException();
+		throw BadOpcodesException();
 		}
-		this->lowOp = lowOpParm;
-		// only support LT and LTE here
-		if (highOpParm != LT || highOpParm != LTE)
+	this->lowOp = lowOpParm;
+	// only support LT and LTE here
+	if (highOpParm != LT || highOpParm != LTE)
+	{
+		throw BadOpcodesException();
+	}
+	this->highOp = highOpParm;
+
+	// store scan settings into instance
+	if (this->attributeType == INTEGER){
+		this->lowValInt = *((int *)lowValParm);
+		this->highValInt = *((int *)highValParm);
+			
+		// If lowValue > highValue, throw the exception BadScanrangeException.
+		if (this->lowValInt > this->highValInt)
 		{
-			throw BadOpcodesException();
+			throw BadScanrangeException();
 		}
-		this->highOp = highOpParm;
-
-		// store scan settings into instance
-		if (this->attributeType == INTEGER)
-		{
-			this->lowValInt = *((int *)lowValParm);
-			this->highValInt = *((int *)highValParm);
-
-			// If lowValue > highValue, throw the exception BadScanrangeException.
-			if (this->lowValInt > this->highValInt)
-			{
-				throw BadScanrangeException();
-			}
+	}
+		
+	else if (this->attributeType == DOUBLE)
+	{
+		this->lowValDouble = *((double *)lowValParm);
+		this->highValDouble = *((double *)highValParm);
+			
+		// If lowValue > highValue, throw the exception BadScanrangeException.
+		if (this->lowValDouble > this->highValDouble){
+			throw BadScanrangeException();
 		}
-
-		else if (this->attributeType == DOUBLE)
+	}
+	else if (this->attributeType == STRING){
+		this->lowValString = (char *)lowValParm;
+		this->highValString = (char *)highValParm;
+			
+		// If lowValue > highValue, throw the exception BadScanrangeException.
+		if (this->lowValString.compare(this->highValString) > 0)
 		{
-			this->lowValDouble = *((double *)lowValParm);
-			this->highValDouble = *((double *)highValParm);
-
-			// If lowValue > highValue, throw the exception BadScanrangeException.
-			if (this->lowValDouble > this->highValDouble)
-			{
-				throw BadScanrangeException();
-			}
+			throw BadScanrangeException();
 		}
-		else if (this->attributeType == STRING)
-		{
-			this->lowValString = (char *)lowValParm;
-			this->highValString = (char *)highValParm;
+	}
 
-			// If lowValue > highValue, throw the exception BadScanrangeException.
-			if (this->lowValString.compare(this->highValString) > 0)
-			{
-				throw BadScanrangeException();
-			}
-		}
+	// Both the high and low values are in a binary form, i.e., for integer
+	// keys, these point to the address of an integer.
 
-		// Both the high and low values are in a binary form, i.e., for integer
-		// keys, these point to the address of an integer.
+	// Start from root to find out the leaf page that contains the first RecordID
+	// that satisfies the scan parameters. Keep that page pinned in the buffer pool.
+	//currentPageNum = rootPageNum;
+	//bufMgr->readPage(file, rootPageNum, currentPageData);
+	//bufMgr->unPinPage(file, currentPageNum, true);
+	scanExecuting = true;
+	// Start from root to find out the leaf page that contains the first RecordID
+	// that satisfies the scan parameters. Keep that page pinned in the buffer pool.
+	bufMgr->readPage(file, rootPageNum, currentPageData);
+	currentPageNum = rootPageNum;
+	bufMgr->unPinPage(file, currentPageNum, false);
+	// currentNode should start at the ROOT, which should be a NonLeafNode
+	NonLeafNodeInt *currentNode = (NonLeafNodeInt *)currentPageData;
 
-		// Start from root to find out the leaf page that contains the first RecordID
-		// that satisfies the scan parameters. Keep that page pinned in the buffer pool.
-		// currentPageNum = rootPageNum;
-		// bufMgr->readPage(file, rootPageNum, currentPageData);
-		// bufMgr->unPinPage(file, currentPageNum, true);
-		scanExecuting = true;
-		// Start from root to find out the leaf page that contains the first RecordID
-		// that satisfies the scan parameters. Keep that page pinned in the buffer pool.
-		bufMgr->readPage(file, rootPageNum, currentPageData);
-		currentPageNum = rootPageNum;
-		bufMgr->unPinPage(file, currentPageNum, false);
-		// currentNode should start at the ROOT, which should be a NonLeafNode
-		NonLeafNodeInt *currentNode = (NonLeafNodeInt *)currentPageData;
-
-		// use the lowValParm to find the start of the range in the B-Tree
-		// this works because you can only use GT or GTE with the lowValParm
-		while (currentNode->level != 1)
-		{
-			int index = 0;
-			while (true)
-			{
+	// use the lowValParm to find the start of the range in the B-Tree
+	// this works because you can only use GT or GTE with the lowValParm
+	while (currentNode->level != 1)
+	{
+		int index = 0;
+		while (true) {
 				// index is past at or past the limit
-				if (index >= nodeOccupancy)
-				{
-					break;
-				}
+			if (index >= nodeOccupancy) {
+				break;
+			}
 				// check if page is valid
 				//                       index or index+1
-				if (currentNode->pageNoArray[index] == Page::INVALID_NUMBER)
-				{
-					break;
-				}
+			if (currentNode->pageNoArray[index] == Page::INVALID_NUMBER) {
+				break;
+			}
 				// check if the lowVal is less than the current key at the index
 				// currrent only works with INTEGERS
-				if (this->lowValInt < currentNode->keyArray[index])
-				{
-					break;
-				}
-				// increment and run again
-				index++;
+			if (this->lowValInt < currentNode->keyArray[index]) {
+				break;
 			}
+				// increment and run again
+			index++;
+		}
 			// Use the index we found to get the pageNo
-			PageId nextNodePageNum = currentNode->pageNoArray[index];
-			bufMgr->readPage(file, nextNodePageNum, currentPageData);
-			bufMgr->unPinPage(file, nextNodePageNum, false);
-			currentPageNum = nextNodePageNum;
+		PageId nextNodePageNum = currentNode->pageNoArray[index];
+		bufMgr->readPage(file, nextNodePageNum, currentPageData);
+		bufMgr->unPinPage(file, nextNodePageNum, false);
+		currentPageNum = nextNodePageNum;
 
 			// go to next node
-			currentNode = (NonLeafNodeInt *)currentPageData;
-		}
+		currentNode = (NonLeafNodeInt *)currentPageData;
+	}
 
 		// TODO: (ANDY) still need to find LEAF and INDEX of starting position
 
-		while (true)
-		{
-			int loop = 0;
-			LeafNodeInt *currentNode = (LeafNodeInt *)currentPageData;
-			for (int i = 0; i < leafOccupancy; i++)
-			{
-				int key = currentNode->keyArray[i];
-				if ((this->lowOp == GTE && this->highOp == LTE) && (key >= this->lowOp && key <= this->highOp))
-				{
-					scanExecuting = true;
-					loop = 1;
-					nextEntry = i;
-					break;
+	while (true){
+		int loop = 0;
+		LeafNodeInt *currentNode = (LeafNodeInt *)currentPageData;
+		for (int i = 0; i < leafOccupancy; i++){
+			int key = currentNode->keyArray[i];
+			if ((this->lowOp == GTE && this->highOp == LTE) && (key >= this->lowOp && key <= this->highOp)){
+				scanExecuting = true;
+				loop = 1;
+				nextEntry = i;
+				break;
 				}
-				else if ((this->lowOp == GTE && this->highOp == LT) && (key >= this->lowOp && key < this->highOp))
-				{
-					scanExecuting = true;
-					loop = 1;
-					nextEntry = i;
-					break;
+			else if ((this->lowOp == GTE && this->highOp == LT) && (key >= this->lowOp && key < this->highOp)){
+				scanExecuting = true;
+				loop = 1;
+				nextEntry = i;
+				break;
 				}
-				else if ((this->lowOp == GT && this->highOp == LTE) && (key > this->lowOp && key <= this->highOp))
+			else if ((this->lowOp == GT && this->highOp == LTE) && (key > this->lowOp && key <= this->highOp))
 				{
-					scanExecuting = true;
-					loop = 1;
-					nextEntry = i;
-					break;
+				scanExecuting = true;
+				loop = 1;
+				nextEntry = i;
+				break;
 				}
-				else if ((this->lowOp == GT && this->highOp == LT) && (key >= this->lowOp && key <= this->highOp))
+			else if ((this->lowOp == GT && this->highOp == LT) && (key >= this->lowOp && key <= this->highOp))
 				{
-					scanExecuting = true;
-					loop = 1;
-					nextEntry = i;
-					break;
+				scanExecuting = true;
+				loop = 1;
+				nextEntry = i;
+				break;
 				}
-				else if ((this->lowOp == GTE && this->highOp == LT) && (key >= this->lowOp && key < this->highOp))
+			else if ((this->lowOp == GTE && this->highOp == LT) && (key >= this->lowOp && key < this->highOp))
 				{
-					scanExecuting = true;
-					loop = 1;
-					break;
+				scanExecuting = true;
+				loop = 1;
+				break;
 				}
-				else if ((this->lowOp == GT && this->highOp == LTE) && (key > this->lowOp && key <= this->highOp))
+			else if ((this->lowOp == GT && this->highOp == LTE) && (key > this->lowOp && key <= this->highOp))
 				{
-					scanExecuting = true;
-					loop = 1;
-					break;
+				scanExecuting = true;
+				loop = 1;
+				break;
 				}
-				else if ((this->lowOp == GT && this->highOp == LT) && (key >= this->lowOp && key <= this->highOp))
+			else if ((this->lowOp == GT && this->highOp == LT) && (key >= this->lowOp && key <= this->highOp))
 				{
-					scanExecuting = true;
-					loop = 1;
-					break;
-				}
+				scanExecuting = true;
+				loop = 1;
+				break;
+			}
 				// Need to check which attributeType we are working with and then use that compare method properly
 				// else if ((this->highOp == LT && key >= this->h) || (this->highOp == LTE && key > highValParm))
 				// {
@@ -685,17 +704,17 @@ namespace badgerdb
 				// 	throw NoSuchKeyFoundException();
 				// }
 				// when i is the last one and still not out of loop so its not found in the node
-				if (i == leafOccupancy - 1)
+			if (i == leafOccupancy - 1)
 				{
-					bufMgr->unPinPage(file, currentPageNum, false);
-					if (currentNode->rightSibPageNo != 0)
+				bufMgr->unPinPage(file, currentPageNum, false);
+				if (currentNode->rightSibPageNo != 0)
+				{
+					currentPageNum = currentNode->rightSibPageNo;
+					bufMgr->readPage(file, currentPageNum, currentPageData);
+				}
+				else
 					{
-						currentPageNum = currentNode->rightSibPageNo;
-						bufMgr->readPage(file, currentPageNum, currentPageData);
-					}
-					else
-					{
-						throw NoSuchKeyFoundException();
+					throw NoSuchKeyFoundException();
 					}
 				}
 			}
