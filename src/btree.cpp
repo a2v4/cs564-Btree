@@ -38,14 +38,19 @@ namespace badgerdb
 		// initialize
 		this->bufMgr = bufMgrIn;
 		this->attrByteOffset = attrByteOffset;
-		this->attributeType = attributeType;
+		this->attributeType = attrType;
 
 		this->currentPageData = new Page;
-		this->currentPageNum = (PageId)-1;
-		this->rootPageNum = (PageId)-1;
-		this->headerPageNum = (PageId)-1;
+		this->currentPageNum = Page::INVALID_NUMBER;
+		this->rootPageNum = Page::INVALID_NUMBER;
+		this->headerPageNum = Page::INVALID_NUMBER;
 		this->scanExecuting = false;
 		this->nextEntry = -1;
+
+		if (this->attributeType == INTEGER) {
+			this->nodeOccupancy = INTARRAYNONLEAFSIZE;
+			this->leafOccupancy = INTARRAYLEAFSIZE;
+		}
 
 		// Check to see if the corresponding index file exists. If so, open the file.
 		// If not, create it
@@ -87,8 +92,8 @@ namespace badgerdb
 			Page *rootPage;
 			bufMgrIn->allocPage(file, rootPageNum, rootPage);
 
-			// initialize root?
-			// LeafNodeInt *root = (LeafNodeInt *)rootPage;
+			// initialize root
+			NonLeafNodeInt *root = (NonLeafNodeInt *)rootPage;
 
 			// insert entries for every tuple in the base relation using FileScan class.
 			FileScan *scanner = new FileScan(relationName, bufMgrIn);
@@ -99,11 +104,14 @@ namespace badgerdb
 				try
 				{
 					scanner->scanNext(recordId);
-					const char *key = currRecord.c_str() + attrByteOffset;
+					const char *currRecordStr = currRecord.c_str();
+					// cast to INT to make key compatible in the future
+					int *key = *((int*) (currRecordStr + attrByteOffset));
 					insertEntry(key, recordId);
 				}
 				catch (EndOfFileException &e)
 				{
+					scanExecuting = false;
 					break;
 				}
 			}
