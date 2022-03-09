@@ -241,8 +241,7 @@ namespace badgerdb
 		else
 		{
 			// need to split leaf to make room
-			// TODO: Utilize splitLeaf()
-			// splitLeaf()
+			splitLeaf(currLeafNode, pageNo, pair);
 		}
 
 		// Unpin and flush to disk
@@ -291,7 +290,7 @@ namespace badgerdb
 		bufMgr->unPinPage(file, pageNo, true);
 	}
 
-	void BTreeIndex::sortedLeafEntry(LeafNodeInt *currNode, RIDKeyPair<int> pair, int occupancy)
+	void BTreeIndex::sortedLeafEntry(LeafNodeInt *currNode, RIDKeyPair<int> pair)
 	{
 		// Insert new key in ascending order
 		int i = 0;
@@ -306,10 +305,9 @@ namespace badgerdb
 		}
 		currNode->keyArray[i] = pair.key;
 		currNode->ridArray[i] = pair.rid;
-		occupancy++;
 	}
 
-	void BTreeIndex::sortedNonLeafEntry(NonLeafNodeInt *currNode, int key, int occupancy)
+	void BTreeIndex::sortedNonLeafEntry(NonLeafNodeInt *currNode, int key)
 	{
 		// insert into available page in node
 		int i = 0;
@@ -323,50 +321,73 @@ namespace badgerdb
 			currNode->keyArray[j] = currNode->keyArray[j - 1];
 		}
 		currNode->keyArray[i] = key;
-		occupancy++;
 	}
 
 	void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
 	{
-		int occupancy = sizeof(currNode->keyArray) / sizeof(currNode->keyArray[0]);
+		// int occupancy = sizeof(currNode->keyArray) / sizeof(currNode->keyArray[0]);
+		
+		Page *currPage;
+		bufMgr->readPage(file, pageid, currPage);
+		LeafNodeInt *currNodeLeaf = (LeafNodeInt *)currPage;
+
+		int occupancy = 0;
+		// make sure index is less than leaf occupancy limit
+		// check if the page_number is valid for that entry at that index
+		while (occupancy <= leafOccupancy && currNodeLeaf->ridArray[occupancy].page_number != Page::INVALID_NUMBER)
+		{
+			occupancy++;
+		}
 
 		if (occupancy == leafOccupancy) // if leaf full
 		{
 			// split leaf
-			splitLeaf(currNode, pageid, pair, occupancy);
+			splitLeaf(currNode, pageid, pair);
 			currNode->rightSibPageNo = pageid; // attach new node to current node
 		}
 		else
 		{
 			// else, insert into existing leaf
-			sortedLeafEntry(currNode, pair, occupancy);
+			sortedLeafEntry(currNode, pair);
 		}
 	}
 
 	void BTreeIndex::insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key)
 	{
-		int occupancy = sizeof(currNode->keyArray) / sizeof(currNode->keyArray[0]);
+		// int occupancy = sizeof(currNode->keyArray) / sizeof(currNode->keyArray[0]);
+
+		Page *currPage;
+		bufMgr->readPage(file, pageid, currPage);
+		NonLeafNodeInt *currNonLeafNode = (NonLeafNodeInt *)currPage;
+		
+		int occupancy = 0;
+		// make sure index is less than leaf occupancy limit
+		// check if the page_number is valid for that entry at that index
+		while (occupancy <= leafOccupancy && currNonLeafNode->pageNoArray[occupancy] != Page::INVALID_NUMBER)
+		{
+			occupancy++;
+		}
 
 		if (occupancy == nodeOccupancy) // if full
 		{
 			// split node
-			splitNonLeaf(currNode, pageid, key, occupancy);
+			splitNonLeaf(currNode, pageid, key);
 		}
 		else
 		{
 			// else, insert into existing node
-			sortedNonLeafEntry(currNode, key, occupancy);
+			sortedNonLeafEntry(currNode, key);
 		}
 	}
 
-	void BTreeIndex::splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair, int occupancy)
+	void BTreeIndex::splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
 	{
 
 		// create new leafNode
 		LeafNodeInt *newNode = new LeafNodeInt;
 
 		// insert in sorted order
-		sortedLeafEntry(currNode, pair, occupancy);
+		sortedLeafEntry(currNode, pair);
 
 		// Now, copy half the keys from previous node to this one
 		bool insertedNewEntry = false;
@@ -407,13 +428,13 @@ namespace badgerdb
 		insertToNonLeaf(newInternalNode, newPageId, leftmostKey);
 	}
 
-	void BTreeIndex::splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key, int occupancy)
+	void BTreeIndex::splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key)
 	{
 		// create new non leafNode
 		NonLeafNodeInt *newNode = new NonLeafNodeInt;
 
 		// insert new key into current node in sorted order first
-		sortedNonLeafEntry(currNode, key, occupancy);
+		sortedNonLeafEntry(currNode, key);
 
 		// copy half the keys from previous node to this one
 		bool insertedNewEntry = false; // currently, not being used/checked

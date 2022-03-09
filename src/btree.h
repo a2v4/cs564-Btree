@@ -345,9 +345,9 @@ namespace badgerdb
      */
     void insertEntry(const void *_key, const RecordId rid, bool isLeaf, PageId pageNo);
 
-    void splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair, int occupancy);
+    void splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
 
-    void splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key, int occupancy);
+    void splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key);
 
     /**
      * @brief Insert given <rid, key> pair into a leaf at the given pageNo
@@ -371,9 +371,9 @@ namespace badgerdb
 
     void insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key);
 
-    void sortedLeafEntry(LeafNodeInt *currNode, RIDKeyPair<int> pair, int occupancy);
+    void sortedLeafEntry(LeafNodeInt *currNode, RIDKeyPair<int> pair);
 
-    void sortedNonLeafEntry(NonLeafNodeInt *currNode, int key, int occupancy);
+    void sortedNonLeafEntry(NonLeafNodeInt *currNode, int key);
 
     void splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
 
