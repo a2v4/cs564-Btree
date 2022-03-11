@@ -496,7 +496,8 @@ namespace badgerdb
 		
 		
 		//take out the middle key from curr node
-		for(int i = 0; i < nodeOccupancy/2; i++){
+		for (int i = 0; i < nodeOccupancy / 2; i++)
+		{
 			newNode[i] = newNode[i + 1];
 		}
 
