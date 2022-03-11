@@ -238,6 +238,13 @@ namespace badgerdb
      */
     int nodeOccupancy;
 
+    /*
+    * Stack to keep track of parents of internal nodes
+    */
+    std::stack<PageId> stack;
+
+
+
     // MEMBERS SPECIFIC TO SCANNING
 
     /**
@@ -300,6 +307,7 @@ namespace badgerdb
      */
     Operator highOp;
 
+
   public:
     /**
      * BTreeIndex Constructor.
@@ -349,33 +357,35 @@ namespace badgerdb
 
     void splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key);
 
-    /**
-     * @brief Insert given <rid, key> pair into a leaf at the given pageNo
-     *
-     * @param key		Key to insert, pointer to integer/double/char string
-     * @param rid		Record ID of a record whose entry is getting inserted into the index.
-     * @param pageNo 	page number where the leaf node is located
-     */
+    // /**
+    //  * @brief Insert given <rid, key> pair into a leaf at the given pageNo
+    //  *
+    //  * @param key		Key to insert, pointer to integer/double/char string
+    //  * @param rid		Record ID of a record whose entry is getting inserted into the index.
+    //  * @param pageNo 	page number where the leaf node is located
+    //  */
+    // void insertToLeaf(const void *_key, const RecordId rid, PageId pageNo);
+
     void insertToLeaf(const void *_key, const RecordId rid, PageId pageNo);
 
-    void insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
+    // /**
+    //  * @brief Find page to insert given <rid, key> pair from the given pageNo
+    //  *
+    //  * @param key		Key to insert, pointer to integer/double/char string
+    //  * @param rid		Record ID of a record whose entry is getting inserted into the index.
+    //  * @param pageNo 	page number where the current node is located
+    //  */
+    // void insertToNonLeaf(const void *_key, const RecordId rid, PageId pageNo);
 
-    /**
-     * @brief Find page to insert given <rid, key> pair from the given pageNo
-     *
-     * @param key		Key to insert, pointer to integer/double/char string
-     * @param rid		Record ID of a record whose entry is getting inserted into the index.
-     * @param pageNo 	page number where the current node is located
-     */
     void insertToNonLeaf(const void *_key, const RecordId rid, PageId pageNo);
-
-    void insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key);
 
     void sortedLeafEntry(LeafNodeInt *currNode, RIDKeyPair<int> pair);
 
     void sortedNonLeafEntry(NonLeafNodeInt *currNode, int key);
 
     void splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
+
+    void splitHelper(NonLeafNodeInt * currNode, PageId currPageId, int leftmostKey);
 
     /**
      * Begin a filtered scan of the index.  For instance, if the method is called

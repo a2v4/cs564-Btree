@@ -374,7 +374,7 @@ namespace badgerdb
 
 		if(pageNo == rootPageNum) { //if we are splitting the root for the first time
 			/** create a new non leaf parent
-			 *  create a new leaf node as sibline
+			 *  create a new leaf node as sibling
 			 *  push non leaf into stack
 			 *  redistribute keys and COPY up middle/leftmost key
 			 * connect the two leaf nodes
@@ -404,33 +404,33 @@ namespace badgerdb
 				{
 					break;
 				}
-				if (pair.key <= currNode->keyArray[i])
-				{ // if key < current key in node, insert it first
-					newNode->keyArray[i] = pair.key;
-					newNode->ridArray[i] = pair.rid;
+				if(currNode->keyArray[i] == key) {
 					insertedNewEntry = true;
 				}
-				else
-				{ // else keep inserting from currNode
-					newNode->keyArray[i] = currNode->keyArray[i];
-					newNode->ridArray[i] = currNode->ridArray[i];
-				}
+				newNode->keyArray[i] = currNode->keyArray[i];
+				newNode->ridArray[i] = currNode->ridArray[i];
+				
 				i++;
 			}
 		
 			int leftmostKey = newNode->keyArray[0];
 
 			// copy up leftmost key on new node up to the root
-			insertToNonLeaf(leftmostKey, rid, pageNo);
+			insertToNonLeaf(*_leftmostKey, rid, pageNo);
+
+			//push new parent to stack
+			
+
 			// unpin pages
 			bufMgr->unPinPage(file, newPageId, true);
-			stack.push(newPageId);
+			
 		} else {
 			/**
-			 * Copy up middle key
-			 * call insert To Non leaf
+			 * split and redistribute
+			 * then Copy up middle key
+			 * then call insert To Non leaf
 			 */
-
+			
 			
 		}
 
