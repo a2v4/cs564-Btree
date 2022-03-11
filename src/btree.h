@@ -11,6 +11,7 @@
 #include <string>
 #include "string.h"
 #include <sstream>
+#include <stack>
 
 #include "types.h"
 #include "page.h"
@@ -241,7 +242,7 @@ namespace badgerdb
     /*
     * Stack to keep track of parents of internal nodes
     */
-    std::stack<PageId> stack;
+    std::stack<PageId> treeStack;
 
 
 
@@ -338,54 +339,35 @@ namespace badgerdb
      * This splitting will require addition of new leaf page number entry into the parent non-leaf, which may in-turn get split.
      * This may continue all the way upto the root causing the root to get split. If root gets split, metapage needs to be changed accordingly.
      * Make sure to unpin pages as soon as you can.
-     * @param _key			Key to insert, pointer to integer/double/char string
+     * @param key			Key to insert, pointer to integer/double/char string
      * @param rid			Record ID of a record whose entry is getting inserted into the index.
      **/
-    void insertEntry(const void *_key, const RecordId rid);
+    void insertEntry(int key, const RecordId rid);
 
     /**
-     * @brief
-     *
-     * @param key		Key to insert, pointer to integer/double/char string
-     * @param rid		Record ID of a record whose entry is getting inserted into the index.
-     * @param isLeaf 	boolean if dealing with leaf or not
-     * @param pageNo 	page number to work with
+     * @brief Traverse B-Tree using  <rid, key> pair into a leaf at the given pageNo
+     * 
+     * @param key the key to compare values to
+     * @param pageNo the current page number/node should work with
+     * @param level signifies the level we are working with
      */
-    void insertEntry(const void *_key, const RecordId rid, bool isLeaf, PageId pageNo);
+    PageId traverse(int key, PageId pageNo, int level);
 
     void splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
 
     void splitNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key);
 
-    // /**
-    //  * @brief Insert given <rid, key> pair into a leaf at the given pageNo
-    //  *
-    //  * @param key		Key to insert, pointer to integer/double/char string
-    //  * @param rid		Record ID of a record whose entry is getting inserted into the index.
-    //  * @param pageNo 	page number where the leaf node is located
-    //  */
-    // void insertToLeaf(const void *_key, const RecordId rid, PageId pageNo);
-
-    void insertToLeaf(const void *_key, const RecordId rid, PageId pageNo);
-
-    // /**
-    //  * @brief Find page to insert given <rid, key> pair from the given pageNo
-    //  *
-    //  * @param key		Key to insert, pointer to integer/double/char string
-    //  * @param rid		Record ID of a record whose entry is getting inserted into the index.
-    //  * @param pageNo 	page number where the current node is located
-    //  */
-    // void insertToNonLeaf(const void *_key, const RecordId rid, PageId pageNo);
-
-    void insertToNonLeaf(const void *_key, const RecordId rid, PageId pageNo);
-
-    void sortedLeafEntry(LeafNodeInt *currNode, RIDKeyPair<int> pair);
+    void sortedLeafEntry(LeafNodeInt *currNode, RIDKeyPair<int> newPair);
 
     void sortedNonLeafEntry(NonLeafNodeInt *currNode, int key);
 
-    void splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
+    void insertToLeaf(int key, const RecordId rid, PageId pageNo);
 
-    void splitHelper(NonLeafNodeInt * currNode, PageId currPageId, int leftmostKey);
+    void splitLeaf(int key, const RecordId rid, PageId pageNo);
+
+    void insertToNonLeaf(int key, const RecordId rid, PageId pageNo);
+
+    void insertToNonLeaf(int key, PageId pageNo);
 
     /**
      * Begin a filtered scan of the index.  For instance, if the method is called
