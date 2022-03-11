@@ -160,7 +160,7 @@ namespace badgerdb
 		bool isRootALeaf = metaInfo->isRootALeaf;
 		if (isRootALeaf == true)
 		{
-			insertToLeaf(_key, rid, rootPageNum);
+			insertToLeaf(_key, rid, pageNo)
 		}
 		else
 		{
@@ -190,109 +190,111 @@ namespace badgerdb
 	// 	}
 	// }
 
-	/**
-	 * @brief Insert given <rid, key> pair into a leaf at the given pageNo
-	 *
-	 * @param key		Key to insert, pointer to integer/double/char string
-	 * @param rid		Record ID of a record whose entry is getting inserted into the index.
-	 * @param pageNo 	page number where the leaf node is located
-	 */
-	void BTreeIndex::insertToLeaf(const void *_key, const RecordId rid, PageId pageNo)
-	{
-		Page *currPage;
-		bufMgr->readPage(file, pageNo, currPage);
-		LeafNodeInt *currLeafNode = (LeafNodeInt *)currPage;
+	// /**
+	//  * @brief Insert given <rid, key> pair into a leaf at the given pageNo
+	//  *
+	//  * @param key		Key to insert, pointer to integer/double/char string
+	//  * @param rid		Record ID of a record whose entry is getting inserted into the index.
+	//  * @param pageNo 	page number where the leaf node is located
+	//  */
+	// void BTreeIndex::insertToLeaf(const void *_key, const RecordId rid, PageId pageNo)
+	// {
+	// 	Page *currPage;
+	// 	bufMgr->readPage(file, pageNo, currPage);
+	// 	LeafNodeInt *currLeafNode = (LeafNodeInt *)currPage;
 
-		// set up the RID-Key pair for insertion
-		RIDKeyPair<int> pair;
-		int key = (*((int *)_key));
-		pair.set(rid, key);
+	// 	// set up the RID-Key pair for insertion
+	// 	RIDKeyPair<int> pair;
+	// 	int key = (*((int *)_key));
+	// 	pair.set(rid, key);
 
-		// int indexToInsertAt = 0;
-		// // make sure index is less than leaf occupancy limit
-		// // check if KEY is larger than the current one we are at
-		// // check if the page_number is valid for that entry at that index
-		// while (indexToInsertAt < leafOccupancy && key > currLeafNode->keyArray[indexToInsertAt] && currLeafNode->ridArray[indexToInsertAt].page_number != Page::INVALID_NUMBER)
-		// {
-		// 	// increment until we find a spot to insert our <rid, key> pair
-		// 	indexToInsertAt++;
-		// }
+	// 	// int indexToInsertAt = 0;
+	// 	// // make sure index is less than leaf occupancy limit
+	// 	// // check if KEY is larger than the current one we are at
+	// 	// // check if the page_number is valid for that entry at that index
+	// 	// while (indexToInsertAt < leafOccupancy && key > currLeafNode->keyArray[indexToInsertAt] && currLeafNode->ridArray[indexToInsertAt].page_number != Page::INVALID_NUMBER)
+	// 	// {
+	// 	// 	// increment until we find a spot to insert our <rid, key> pair
+	// 	// 	indexToInsertAt++;
+	// 	// }
 
-		// // start checking every index afterwards to find the end
-		// int lastIndex = indexToInsertAt;
-		// while (lastIndex < leafOccupancy && currLeafNode->ridArray[lastIndex].page_number != Page::INVALID_NUMBER)
-		// {
-		// 	// increment till we find an OPEN spot in the arrays
-		// 	lastIndex++;
-		// }
+	// 	// // start checking every index afterwards to find the end
+	// 	// int lastIndex = indexToInsertAt;
+	// 	// while (lastIndex < leafOccupancy && currLeafNode->ridArray[lastIndex].page_number != Page::INVALID_NUMBER)
+	// 	// {
+	// 	// 	// increment till we find an OPEN spot in the arrays
+	// 	// 	lastIndex++;
+	// 	// }
 
-		// if (lastIndex < leafOccupancy)
-		// {
-		// 	// insert normally because this means there is room for our entry
-		// 	for (int i = lastIndex; indexToInsertAt < i; i--)
-		// 	{
-		// 		// move each element one index ahead to make room for our entry
-		// 		currLeafNode->keyArray[i] = currLeafNode->keyArray[i - 1];
-		// 		currLeafNode->ridArray[i] = currLeafNode->ridArray[i - 1];
-		// 	}
-		// 	// insert rid and key info into the respective arrays in the current leaf node
-		// 	currLeafNode->keyArray[indexToInsertAt] = key;
-		// 	currLeafNode->ridArray[indexToInsertAt] = rid;
-		// }
-		if((sizeof(currLeafNode->keyArray) / sizeof(currLeafNode->keyArray[0])) < leafOccupancy){
-			sortedLeafEntry(currLeafNode, pair);
-		}
-		else
-		{
-			// need to split leaf to make room
-			splitLeaf(currLeafNode, pageNo, pair);
-		}
+	// 	// if (lastIndex < leafOccupancy)
+	// 	// {
+	// 	// 	// insert normally because this means there is room for our entry
+	// 	// 	for (int i = lastIndex; indexToInsertAt < i; i--)
+	// 	// 	{
+	// 	// 		// move each element one index ahead to make room for our entry
+	// 	// 		currLeafNode->keyArray[i] = currLeafNode->keyArray[i - 1];
+	// 	// 		currLeafNode->ridArray[i] = currLeafNode->ridArray[i - 1];
+	// 	// 	}
+	// 	// 	// insert rid and key info into the respective arrays in the current leaf node
+	// 	// 	currLeafNode->keyArray[indexToInsertAt] = key;
+	// 	// 	currLeafNode->ridArray[indexToInsertAt] = rid;
+	// 	// }
+	// 	if((sizeof(currLeafNode->keyArray) / sizeof(currLeafNode->keyArray[0])) < leafOccupancy){
+	// 		sortedLeafEntry(currLeafNode, pair);
+	// 	}
+	// 	else
+	// 	{
+	// 		// need to split leaf to make room
+	// 		splitLeaf(currLeafNode, pageNo, pair);
+	// 	}
 
-		// Unpin and flush to disk
-		bufMgr->unPinPage(file, pageNo, true);
-	}
+	// 	// Unpin and flush to disk
+	// 	bufMgr->unPinPage(file, pageNo, true);
+	// }
 
-	/**
-	 * @brief Find page to insert given <rid, key> pair from the given pageNo
-	 *
-	 * @param key		Key to insert, pointer to integer/double/char string
-	 * @param rid		Record ID of a record whose entry is getting inserted into the index.
-	 * @param pageNo 	page number where the current node is located
-	 */
-	void BTreeIndex::insertToNonLeaf(const void *_key, const RecordId rid, PageId pageNo)
-	{
-		Page *currPage;
-		bufMgr->readPage(file, pageNo, currPage);
-		NonLeafNodeInt *currNonLeafNode = (NonLeafNodeInt *)currPage;
+	// /**
+	//  * @brief Find page to insert given <rid, key> pair from the given pageNo
+	//  *
+	//  * @param key		Key to insert, pointer to integer/double/char string
+	//  * @param rid		Record ID of a record whose entry is getting inserted into the index.
+	//  * @param pageNo 	page number where the current node is located
+	//  */
+	// void BTreeIndex::insertToNonLeaf(const void *_key, const RecordId rid, PageId pageNo)
+	// {
+	// 	Page *currPage;
+	// 	bufMgr->readPage(file, pageNo, currPage);
+	// 	NonLeafNodeInt *currNonLeafNode = (NonLeafNodeInt *)currPage;
 
-		// set up the RID-Key pair for insertion
-		// RIDKeyPair<int> pair;
-		int key = (*((int *)_key));
-		// pair.set(rid, key);
+	// 	// set up the RID-Key pair for insertion
+	// 	// RIDKeyPair<int> pair;
+	// 	int key = (*((int *)_key));
+	// 	// pair.set(rid, key);
 
-		int indexToInsertAt = 0;
-		// make sure index is less than leaf occupancy limit
-		// check if KEY is larger than the current one we are at
-		// check if the page_number is valid for that entry at that index
-		while (indexToInsertAt < leafOccupancy && key > currNonLeafNode->keyArray[indexToInsertAt] && currNonLeafNode->pageNoArray[indexToInsertAt] != Page::INVALID_NUMBER)
-		{
-			// increment until we find a spot to insert our <rid, key> pair
-			indexToInsertAt++;
-		}
+	// 	int indexToInsertAt = 0;
+	// 	// make sure index is less than leaf occupancy limit
+	// 	// check if KEY is larger than the current one we are at
+	// 	// check if the page_number is valid for that entry at that index
+	// 	while (indexToInsertAt < leafOccupancy && key > currNonLeafNode->keyArray[indexToInsertAt] && currNonLeafNode->pageNoArray[indexToInsertAt] != Page::INVALID_NUMBER)
+	// 	{
+	// 		// increment until we find a spot to insert our <rid, key> pair
+	// 		indexToInsertAt++;
+	// 	}
 
-		if (currNonLeafNode->level == 1)
-		{
-			// next level is all leaf nodes
-			BTreeIndex::insertEntry(_key, rid, true, currNonLeafNode->pageNoArray[indexToInsertAt]);
-		}
-		else
-		{
-			BTreeIndex::insertEntry(_key, rid, false, currNonLeafNode->pageNoArray[indexToInsertAt]);
-		}
+	// 	if (currNonLeafNode->level == 1)
+	// 	{
+	// 		// next level is all leaf nodes
+	// 		//BTreeIndex::insertEntry(_key, rid, true, currNonLeafNode->pageNoArray[indexToInsertAt]);
+	// 		insertToLeaf(key, rid, pageNo);
+	// 	}
+	// 	else
+	// 	{
+	// 		//BTreeIndex::insertEntry(_key, rid, false, currNonLeafNode->pageNoArray[indexToInsertAt]);
+	// 		insertToNonLeaf(key, rid, pageNo);
+	// 	}
 
-		// Unpin and flush to disk
-		bufMgr->unPinPage(file, pageNo, true);
-	}
+	// 	// Unpin and flush to disk
+	// 	bufMgr->unPinPage(file, pageNo, true);
+	// }
 
 	void BTreeIndex::sortedLeafEntry(LeafNodeInt *currNode, RIDKeyPair<int> newPair)
 	{
@@ -327,12 +329,16 @@ namespace badgerdb
 		currNode->keyArray[i] = key;
 	}
 
-	void BTreeIndex::insertToLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
+	void BTreeIndex::insertToLeaf(const void *_key, const RecordId rid, PageId pageNo)
 	{
 		// int occupancy = sizeof(currNode->keyArray) / sizeof(currNode->keyArray[0]);
 		
+		RIDKeyPair<int> pair;
+		int key = (*((int *)_key));
+		pair.set(rid, key);
+		
 		Page *currPage;
-		bufMgr->readPage(file, pageid, currPage);
+		bufMgr->readPage(file, pageNo, currPage);
 		LeafNodeInt *currNodeLeaf = (LeafNodeInt *)currPage;
 
 		int occupancy = 0;
@@ -346,8 +352,8 @@ namespace badgerdb
 		if (occupancy == leafOccupancy) // if leaf full
 		{
 			// split leaf
-			splitLeaf(currNode, pageid, pair);
-			currNode->rightSibPageNo = pageid; // attach new node to current node
+			splitLeaf(currNodeLeaf, pageNo, pair);
+			
 		}
 		else
 		{
@@ -356,44 +362,44 @@ namespace badgerdb
 		}
 	}
 
-	void BTreeIndex::insertToNonLeaf(NonLeafNodeInt *currNode, PageId pageid, int key)
+		void BTreeIndex::splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
 	{
-		// int occupancy = sizeof(currNode->keyArray) / sizeof(currNode->keyArray[0]);
 
-		Page *currPage;
-		bufMgr->readPage(file, pageid, currPage);
-		NonLeafNodeInt *currNonLeafNode = (NonLeafNodeInt *)currPage;
+		if(pageid == rootPageNum) { //if we are splitting the root for the first time
+			/** create a new non leaf parent
+			 *  push into stack
+			 *  redistribute keys and COPY up middle/leftmost key
+			**/
+
+			// alloc new page for new non leaf node
+			Page *newPage;
+			PageId newPageId;
+			bufMgr->allocPage(file, newPageId, newPage);
+			// create new root which will be a Non leaf node
+			NonLeafNodeInt *newInternalNode = new NonLeafNodeInt;
+			newInternalNode->level = 0;
+			// connect curr node to new leaf node
+			currNode->rightSibPageNo = newPageId;
+			// copy up leftmost key on new node up to the root
+			insertToNonLeaf(_key, rid, PageNo);
+			// unpin pages
+			bufMgr->unPinPage(file, newPageId, true);
+			stack.push(newPageId);
+		} else {
+			/**
+			 * Copy up middle key
+			 * call insert To Non leaf
+			 */
+		}
+
 		
-		int occupancy = 0;
-		// make sure index is less than leaf occupancy limit
-		// check if the page_number is valid for that entry at that index
-		while (occupancy <= nodeOccupancy && currNonLeafNode->pageNoArray[occupancy] != Page::INVALID_NUMBER)
-		{
-			occupancy++;
-		}
-
-		if (occupancy == nodeOccupancy) // if full
-		{
-			// split node
-			splitNonLeaf(currNode, pageid, key);
-		}
-		else
-		{
-			// else, insert into existing node
-			sortedNonLeafEntry(currNode, key);
-		}
-	}
-
-	void BTreeIndex::splitLeaf(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair)
-	{
-
 		// create new leafNode
-		LeafNodeInt *newNode = new LeafNodeInt;
+		//LeafNodeInt *newNode = new LeafNodeInt;
 
-		// // insert in sorted order
+		// // 
 		// sortedLeafEntry(currNode, pair);
 
-		// Now, copy half the keys from previous node to this one
+		// insert in sorted order and copy half the keys from previous node to this one
 		bool insertedNewEntry = false;
 		int i = leafOccupancy / 2;
 		while (i < leafOccupancy)
@@ -418,31 +424,34 @@ namespace badgerdb
 		
 		int leftmostKey = newNode->keyArray[0];
 
-		if(pageid == rootPageNum) { //if we are splitting the root for the first time
-			/** create a new non leaf parent
-			 *  push into stack
-			 *  redistribute keys and COPY up middle/leftmost key
-			**/
+	}
 
-			// alloc new page for new non leaf node
-			Page *newPage;
-			PageId newPageId;
-			bufMgr->allocPage(file, newPageId, newPage);
-			// create new root which will be a Non leaf node
-			NonLeafNodeInt *newInternalNode = new NonLeafNodeInt;
-			newInternalNode->level = 1;
-			// connect curr node to new leaf node
-			currNode->rightSibPageNo = newPageId;
-			// copy up leftmost key on new node up to the root
-			insertToNonLeaf(newInternalNode, newPageId, leftmostKey);
-			//unpin pages
-			bufMgr->unPinPage(file, newPageId, true);
-			stack.push(newPageId);
-		} else {
-			/**
-			 * Copy up middle key
-			 * call insert To Non leaf
-			 */
+
+	void BTreeIndex::insertToNonLeaf(const void *_key, const RecordId rid, PageId pageNo)
+	{
+		// int occupancy = sizeof(currNode->keyArray) / sizeof(currNode->keyArray[0]);
+
+		Page *currPage;
+		bufMgr->readPage(file, pageNo, currPage);
+		NonLeafNodeInt *currNonLeafNode = (NonLeafNodeInt *)currPage;
+		
+		int occupancy = 0;
+		// make sure index is less than leaf occupancy limit
+		// check if the page_number is valid for that entry at that index
+		while (occupancy <= nodeOccupancy && currNonLeafNode->pageNoArray[occupancy] != Page::INVALID_NUMBER)
+		{
+			occupancy++;
+		}
+
+		if (occupancy == nodeOccupancy) // if full
+		{
+			// split node
+			splitNonLeaf(currNode, pageid, key);
+		}
+		else
+		{
+			// else, insert into existing node
+			sortedNonLeafEntry(currNode, key);
 		}
 	}
 
