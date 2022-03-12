@@ -243,11 +243,14 @@ namespace badgerdb
 		{
 			i++;
 		}
+
 		// shift all right values one place to the right
-		for (int j = i + 1; j < leafOccupancy; j++)
+		for (int j = leafOccupancy; j < i; j--)
 		{
 			currLeafNode->keyArray[j] = currLeafNode->keyArray[j - 1];
+			currLeafNode->
 		}
+
 		currLeafNode->keyArray[i] = newPair.key;
 		currLeafNode->ridArray[i] = newPair.rid;
 	}
@@ -261,11 +264,24 @@ namespace badgerdb
 			i++;
 		}
 		// shift all right values one place to the right
-		for (int j = i + 1; j < nodeOccupancy; j++)
+		// i = 2
+		// nodeOccupancy == 4
+		//  0  1  2  3 --- Indexes
+		// [1, 2, 4, 4]
+		// keyArray[i] = 3;
+		// Goal: [1, 2, 3, 4]
+		// 1 2 4 
+		
+		//3 5 6 7
+		//i = 1
+		//3 5 5 7
+
+		for (int j = nodeOccupancy; j < i; j--)
 		{
 			currNonLeafNode->keyArray[j] = currNonLeafNode->keyArray[j - 1];
 			currNonLeafNode->pageNoArray[j] = currNonLeafNode->pageNoArray[j - 1];
 		}
+		
 		currNonLeafNode->keyArray[i] = key;
 		currNonLeafNode->pageNoArray[i] = currNonLeafNode->pageNoArray[i - 1];
 		currNonLeafNode->pageNoArray[i+1] = newPageId;
@@ -418,7 +434,6 @@ namespace badgerdb
 			insertToNonLeaf(leftmostKey, parentPageId, newLeafPageNo);
 			
 			//unpin new sibling leaf node
-			
 			bufMgr->unPinPage(file, newLeafPageNo, true);
 		}
 		// unpin curr leaf node and 
@@ -494,8 +509,14 @@ namespace badgerdb
 			}
 			newNonLeafNode->keyArray[i] = currNode->keyArray[i];
 			newNonLeafNode->pageNoArray[i] = currNode->pageNoArray[i];
+
+			//Clearing out previous positions from left node (currNode)
+			currNode->pageNoArray[i] = 0;
+			currNode->keyArray[i] = 0;
 			i++;
 		}
+
+		newNonLeafNode->level = currNode->level;
 
 		if(!treeStack.empty()) {
 			//access parent Internal node from stack
@@ -507,15 +528,17 @@ namespace badgerdb
 		}
 		
 		
-		//take out the middle key from curr node
-		//                    [0, ... , 511]
+		// take out the middle key from curr node
+		// [0, ... , 511]
 		for (int i = 0; i < (nodeOccupancy + 1) / 2; i++)
-			newNonLeafNode[i] = newNonLeafNode[i + 1];
+		{
+			newNonLeafNode->keyArray[i] = newNonLeafNode->keyArray[i + 1];
+			newNonLeafNode->pageNoArray[i] = newNonLeafNode->pageNoArray[i+1];
 		}
 
 		//unpin curr node and new node
-		BufMgr->unPinPage(file, pageNo, true);
-		BufMgr->unPinPage(file, newPageNo, true);
+		bufMgr->unPinPage(file, pageNo, true);
+		bufMgr->unPinPage(file, newPageNo, true);
 	}
 
 
@@ -550,18 +573,13 @@ namespace badgerdb
 			endScan();
 		}
 		// BadOpcodesException takes higher precedence over BadScanrangeException
-		// only support GT and GTE here
-		if (lowOpParm != GT || lowOpParm != GTE)
+		if ((highOpParm != LTE && highOpParm != LT) || (lowOpParm != GTE && lowOpParm != GT))
 		{
 			throw BadOpcodesException();
 		}
 		this->lowOp = lowOpParm;
-		// only support LT and LTE here
-		if (highOpParm != LT || highOpParm != LTE)
-		{
-			throw BadOpcodesException();
-		}
 		this->highOp = highOpParm;
+
 
 		// store scan settings into instance
 		if (this->attributeType == INTEGER)
