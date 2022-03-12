@@ -242,7 +242,7 @@ namespace badgerdb
     /*
     * Stack to keep track of parents of internal nodes
     */
-    stack<PageId> stack;
+    std::stack<PageId> treeStack;
 
     // MEMBERS SPECIFIC TO SCANNING
 
@@ -354,7 +354,7 @@ namespace badgerdb
 
     void splitLeaf(int key, const RecordId rid, PageId pageNo);
 
-    void splitNonLeaf(int key, const RecordId rid, PageId pageNo);
+    void splitNonLeaf(NonLeafNodeInt *currNode, PageId pageNo, int key, PageId newSiblingPage);
 
     // /**
     //  * @brief Insert given <rid, key> pair into a leaf at the given pageNo
@@ -376,15 +376,15 @@ namespace badgerdb
     //  */
     // void insertToNonLeaf(const void *_key, const RecordId rid, PageId pageNo);
 
-    void insertToNonLeaf(int key, const RecordId rid, PageId pageNo);
+    void insertToNonLeaf(int key, PageId pageNo, PageId newPage);
 
     void sortedLeafEntry(LeafNodeInt *currNode, RIDKeyPair<int> pair);
 
-    void sortedNonLeafEntry(NonLeafNodeInt *currNode, int key);
+    void sortedNonLeafEntry(NonLeafNodeInt *currNode, int key, PageId newPage);
 
-    void splitChild(LeafNodeInt *currNode, PageId pageid, RIDKeyPair<int> pair);
+    void splitChild(LeafNodeInt *currNode, PageId pageNo, RIDKeyPair<int> pair);
 
-    PageId BTreeIndex::traverse(int key, PageId pageNo, int level);
+    PageId traverse(int key, PageId pageNo, int level);
 
     void splitHelper(NonLeafNodeInt * currNode, PageId currPageId, int leftmostKey);
 
