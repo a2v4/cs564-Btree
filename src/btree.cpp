@@ -469,7 +469,10 @@ namespace badgerdb
 		NonLeafNodeInt *newNode = (NonLeafNodeInt*)newPage;
 		// copy half the keys from previous node to this one
 		bool insertedNewEntry = false; // currently, not being used/checked
-		int i = nodeOccupancy / 2 + 1;
+
+		// ((1023 + 1) / 2) = 512
+		int i = ((nodeOccupancy + 1) / 2);
+		// [512, ..., 1023]
 		while (i < nodeOccupancy)
 		{
 			if (insertedNewEntry)
@@ -496,7 +499,8 @@ namespace badgerdb
 		
 		
 		//take out the middle key from curr node
-		for (int i = 0; i < nodeOccupancy / 2; i++)
+		//                    [0, ... , 511]
+		for (int i = 0; i < (nodeOccupancy + 1) / 2; i++)
 		{
 			newNode[i] = newNode[i + 1];
 		}
