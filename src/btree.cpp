@@ -95,7 +95,6 @@ namespace badgerdb
 			// 								   // root->pageNoArray[i] = Page::INVALID_NUMBER;
 			// }
 
-
 			rootLeafNode->rightSibPageNo = 0; // Page::INVALID
 
 			// unpin page, and mark dirty because we wrote the meta info to the header page
@@ -123,7 +122,7 @@ namespace badgerdb
 			catch (EndOfFileException &e)
 			{
 				scanExecuting = false;
-				bufMgr->flushFile(file);
+				// bufMgr->flushFile(file);
 			}
 			// unpin page, and its not dirty because we only READ from it
 			// bufMgr->unPinPage(file, rootPageNum, false);
@@ -214,14 +213,15 @@ namespace badgerdb
 		// make sure index is less than leaf occupancy limit
 		// check if KEY is larger than the current one we are at
 		// check if the page_number is valid for that entry at that index
-		while (currIndex < nodeOccupancy && key > currNonLeafNode->keyArray[currIndex] && currNonLeafNode->pageNoArray[currIndex] != Page::INVALID_NUMBER)
+		while (currIndex < nodeOccupancy && key >= currNonLeafNode->keyArray[currIndex] && currNonLeafNode->pageNoArray[currIndex] != Page::INVALID_NUMBER)
 		{
 			// increment until we find the next place to go
 			currIndex++;
 		}
-		// Get the next pageID because we stopped once we found an entry that was less than our key
+		// Get the next pageID because we stopped once we found an entry that was less than or equal to our key
 		// So the next page ID will point to items that are greater than the item at the current index
-		PageId nextPageNo = currNonLeafNode->pageNoArray[currIndex + 1];
+		// PageId nextPageNo = currNonLeafNode->pageNoArray[currIndex + 1]; // not used yet
+		PageId prevPageNo = currNonLeafNode->pageNoArray[currIndex];
 		int nextLevel = currNonLeafNode->level;
 
 		// just READ, no writes
@@ -229,7 +229,7 @@ namespace badgerdb
 
 		// recursive call to keep traversing
 		// go down a level so the traverse knows what level we are at
-		return traverse(key, nextPageNo, nextLevel - 1);
+		return traverse(key, prevPageNo, nextLevel - 1);
 	}
 
 	void BTreeIndex::sortedLeafEntry(LeafNodeInt *currLeafNode, RIDKeyPair<int> newPair)
@@ -304,7 +304,7 @@ namespace badgerdb
 		if (occupancy == leafOccupancy) // if leaf full
 		{
 			// split leaf
-			splitLeaf(key, rid, pageNo);
+			splitLeaf(currLeafNode, key, rid, pageNo);
 		}
 		else
 		{
@@ -312,17 +312,16 @@ namespace badgerdb
 			sortedLeafEntry(currLeafNode, pair);
 			bufMgr->unPinPage(file, pageNo, true);
 		}
-
 	}
 
-	void BTreeIndex::splitLeaf(int key, const RecordId rid, PageId pageNo)
+	void BTreeIndex::splitLeaf(LeafNodeInt *currNode, int key, const RecordId rid, PageId pageNo)
 	{
 		RIDKeyPair<int> pair;
 		pair.set(rid, key);
 
-		Page *currPageData;
-		bufMgr->readPage(file, pageNo, currPageData);
-		LeafNodeInt *currNode = (LeafNodeInt *)currPageData;
+		// Page *currPageData;
+		// bufMgr->readPage(file, pageNo, currPageData);
+		// LeafNodeInt *currNode = (LeafNodeInt *)currPageData;
 
 		if (pageNo == rootPageNum)
 		{ // if we are splitting the root for the first time
@@ -419,7 +418,7 @@ namespace badgerdb
 				newNode->ridArray[i] = currNode->ridArray[i];
 
 				// CLEAR ENTRIES FROM CURRNODE, SET IT TO ZERO IN THE CURR NODE
-				currNode->keyArray[i] = 0;
+				currNode->keyArray[i] = (PageId)0;
 				currNode->ridArray[i].page_number = 0;
 				i++;
 			}
@@ -467,6 +466,7 @@ namespace badgerdb
 			// send in page id of new leaf node that this key will point to
 			sortedNonLeafEntry(currNonLeafNode, key, newSiblingPage);
 			bufMgr->unPinPage(file, pageNo, true);
+			bufMgr->unPinPage(file, newSiblingPage, true);
 		}
 	}
 
@@ -512,10 +512,10 @@ namespace badgerdb
 				insertedNewEntry = true;
 			}
 			newNonLeafNode->keyArray[i] = currNode->keyArray[i];
-			newNonLeafNode->pageNoArray[i] = currNode->pageNoArray[i];
+			newNonLeafNode->pageNoArray[i + 1] = currNode->pageNoArray[i + 1];
 
 			// Clearing out previous positions from left node (currNode)
-			currNode->pageNoArray[i] = 0;
+			currNode->pageNoArray[i + 1] = 0;
 			currNode->keyArray[i] = 0;
 			i++;
 		}
@@ -640,35 +640,13 @@ namespace badgerdb
 
 		currentPageNum = traverse(this->lowValInt, rootPageNum, currentNode->level);
 
-		// empty stack after each entry/traversal
+		// empty stack that was populated in our traverse
 		while (!treeStack.empty())
 		{
 			treeStack.pop();
 		}
 
-		// PageId nextNodePageNum;
-		bool found = false;
-		while (found) // dont run
-		{
-			int index = 0;
-			while (index >= nodeOccupancy || currentNode->pageNoArray[index] == Page::INVALID_NUMBER || this->lowValInt < currentNode->keyArray[index])
-			{
-				index++;
-			}
-
-			// Use the index we found to get the pageNo
-			PageId nextNodePageNum = currentNode->pageNoArray[index];
-			bufMgr->readPage(file, nextNodePageNum, currentPageData);
-			// bufMgr->unPinPage(file, nextNodePageNum, false);
-			currentPageNum = nextNodePageNum;
-
-			// go to next node
-			currentNode = (NonLeafNodeInt *)currentPageData;
-		}
-
 		bufMgr->readPage(file, currentPageNum, currentPageData);
-
-		// TODO: (ANDY) still need to find LEAF and INDEX of starting position
 
 		while (true)
 		{
@@ -724,7 +702,7 @@ namespace badgerdb
 					break;
 				}
 				// Need to check which attributeType we are working with and then use that compare method properly
-				// else if ((this->highOp == LT && key >= this->h) || (this->highOp == LTE && key > highValParm))
+				// else if ((this->highOp == LT && key >= this->highOp) || (this->highOp == LTE && key > highValParm))
 				// {
 				// 	bufMgr->unPinPage(file, currentPageNum, false);
 				// 	throw NoSuchKeyFoundException();
@@ -756,6 +734,7 @@ namespace badgerdb
 		// 	throw NoSuchKeyFoundException();
 		// }
 	}
+
 	// -----------------------------------------------------------------------------
 	// BTreeIndex::scanNext
 	//	 * Fetch the record id of the next index entry that matches the scan.
@@ -764,7 +743,6 @@ namespace badgerdb
 	//   Make sure to unpin any pages that are no longer required.
 	//   * @param outRid	RecordId of next record found that satisfies the scan criteria returned in this
 	// -----------------------------------------------------------------------------
-
 	void BTreeIndex::scanNext(RecordId &outRid)
 	{
 		if (!scanExecuting)
@@ -836,7 +814,13 @@ namespace badgerdb
 		scanExecuting = false;
 
 		// unpins all the pages that have been pinned for the purpose of the scan
-		bufMgr->unPinPage(file, currentPageNum, false);
+		// FrameId blankFrameId;
+		// try {
+		// 	bufMgr->hashTable->lookup(file, currentPageNum, blankFrameId);
+		// 	bufMgr->unPinPage(file, currentPageNum, false);
+		// } catch(...) {
+		// 	// pass
+		// }
 
 		// reset scan data to NULL
 		currentPageData = nullptr;

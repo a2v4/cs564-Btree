@@ -351,7 +351,7 @@ namespace badgerdb
     //  */
     // void insertEntry(int key, const RecordId rid, bool isLeaf, PageId pageNo);
 
-    void splitLeaf(int key, const RecordId rid, PageId pageNo);
+    void splitLeaf(LeafNodeInt *currNode, int key, const RecordId rid, PageId pageNo);
 
     void splitNonLeaf(NonLeafNodeInt *currNode, PageId pageNo, int key, PageId newSiblingPage);
 
