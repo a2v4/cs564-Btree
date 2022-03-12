@@ -306,6 +306,11 @@ namespace badgerdb
      */
     Operator highOp;
 
+    /**
+     * Variable to track initial Root
+     */
+    PageId initialRootPageNum;
+
   public:
     /**
      * BTreeIndex Constructor.

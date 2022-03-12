@@ -65,8 +65,9 @@ namespace badgerdb
 			bufMgr->readPage(file, headerPageNum, headerPage);
 			IndexMetaInfo *metaInfoPage = (IndexMetaInfo *)headerPage;
 			rootPageNum = metaInfoPage->rootPageNo;
+			initialRootPageNum = rootPageNum;
 			// unpin page, and its not dirty because we only READ from it
-			cout << "Unpin line 69";
+			std::cout << "Unpin line 69\n";
 			bufMgr->unPinPage(file, headerPageNum, false);
 		}
 		else
@@ -82,7 +83,7 @@ namespace badgerdb
 			// initialize root
 			LeafNodeInt *rootLeafNode = (LeafNodeInt *)rootPage;
 			rootLeafNode->rightSibPageNo = 0; // Page::INVALID
-
+			initialRootPageNum = rootPageNum;
 			// insert metadata in header page
 			IndexMetaInfo *metaInfoPage = (IndexMetaInfo *)headerPage;
 
@@ -100,7 +101,7 @@ namespace badgerdb
 
 
 			// unpin page, and mark dirty because we wrote the meta info to the header page
-			cout << "Unpin line 102";
+			std::cout << "Unpin line 102\n";
 			bufMgr->unPinPage(file, headerPageNum, true);
 			bufMgr->unPinPage(file, rootPageNum, true);
 
@@ -190,7 +191,8 @@ namespace badgerdb
 	 */
 	PageId BTreeIndex::traverse(int key, PageId pageNo, int level)
 	{
-		if(pageNo == rootPageNum) {
+		//this is only
+		if(pageNo == initialRootPageNum) {
 			return pageNo;
 		}
 		
@@ -232,7 +234,7 @@ namespace badgerdb
 		int nextLevel = currNonLeafNode->level;
 
 		// just READ, no writes
-		cout << "Unpin line 233";
+		std::cout << "Unpin line 233\n";
 		bufMgr->unPinPage(file, pageNo, false);
 
 		// recursive call to keep traversing
@@ -267,7 +269,7 @@ namespace badgerdb
 		{
 			// else, insert into existing leaf
 			sortedLeafEntry(currLeafNode, pair);
-			cout << "Unpin line 267";
+			std::cout << "Unpin line 267\n";
 			bufMgr->unPinPage(file, pageNo, true);
 		}
 	}
@@ -279,7 +281,7 @@ namespace badgerdb
 
 		// Page *currPageData;
 		// bufMgr->readPage(file, pageNo, currPageData);
-		// LeafNodeInt *currNode = (LeafNodeInt *)currPageData;
+		// //LeafNodeInt *currNode = (LeafNodeInt *)currPageData;
 
 		if (pageNo == rootPageNum)
 		{ // if we are splitting the root for the first time
@@ -293,15 +295,15 @@ namespace badgerdb
 			Page *newPageData;
 			PageId newPageNo;
 			bufMgr->allocPage(file, newPageNo, newPageData);
-			NonLeafNodeInt *newInternalNode = new NonLeafNodeInt;
+			NonLeafNodeInt *newInternalNode = (NonLeafNodeInt *)newPageData;
 			newInternalNode->level = 1;
 			rootPageNum = newPageNo;
 
 			// Create sibling leaf node
-			LeafNodeInt *newNode = new LeafNodeInt;
 			Page *newLeafPage;
 			PageId newLeafPageNo;
 			bufMgr->allocPage(file, newLeafPageNo, newLeafPage);
+			LeafNodeInt *newNode = (LeafNodeInt *)newLeafPage;
 
 			// connect curr node to new leaf node
 			newNode->rightSibPageNo = currNode->rightSibPageNo;
@@ -341,10 +343,12 @@ namespace badgerdb
 			// treeStack.push(newPageNo);
 
 			// unpin new page and unpin sibling and unpin root page
-			cout << "Unpin line 340";
+			std::cout << "Unpin line 340\n";
 			bufMgr->unPinPage(file, newPageNo, true);
+			std::cout << "Unpin line newLeagPage\n";
 			bufMgr->unPinPage(file, newLeafPageNo, true);
-			bufMgr->unPinPage(file, rootPageNum, true);
+			// std::cout << "Unpin line root\n";
+			// bufMgr->unPinPage(file, pageNo, true);
 		}
 		else
 		{ // if we are splitting a leaf node that is not the root
@@ -395,11 +399,11 @@ namespace badgerdb
 			insertToNonLeaf(leftmostKey, parentPageId, newLeafPageNo);
 
 			// unpin new sibling leaf node
-			cout << "Unpin line 393";
+			std::cout << "Unpin line 393\n";
 			bufMgr->unPinPage(file, newLeafPageNo, true);
 		}
 		// unpin curr leaf node and
-		cout << "Unpin line 396";
+		std::cout << "Unpin line 396\n";
 		bufMgr->unPinPage(file, pageNo, true);
 	}
 
@@ -429,9 +433,9 @@ namespace badgerdb
 			// else, insert into existing node
 			// send in page id of new leaf node that this key will point to
 			sortedNonLeafEntry(currNonLeafNode, key, newSiblingPage);
-			cout << "Unpin line 425";
+			std::cout << "Unpin line 425\n";
 			bufMgr->unPinPage(file, pageNo, true);
-			bufMgr->unPinPage(file, newSiblingPage, true);
+			//bufMgr->unPinPage(file, newSiblingPage, true);
 		}
 	}
 
@@ -448,7 +452,7 @@ namespace badgerdb
 
 			newNonLeafRootNode->level = currNode->level + 1;
 			this->rootPageNum = newRootPageNo;
-			cout << "Unpin line 443";
+			std::cout << "Unpin line 443\n";
 			bufMgr->unPinPage(file, newRootPageNo, true);
 
 			// insert new one
@@ -504,7 +508,7 @@ namespace badgerdb
 			newNonLeafNode->keyArray[i] = newNonLeafNode->keyArray[i + 1];
 			newNonLeafNode->pageNoArray[i] = newNonLeafNode->pageNoArray[i + 1];
 		}
-		cout << "Unpin line 499";
+		std::cout << "Unpin line 499\n";
 		// unpin curr node and new node
 		bufMgr->unPinPage(file, pageNo, true);
 		bufMgr->unPinPage(file, pageNo, true);
@@ -603,28 +607,28 @@ namespace badgerdb
 			}
 		}
 
-		else if (this->attributeType == DOUBLE)
-		{
-			this->lowValDouble = *((double *)lowValParm);
-			this->highValDouble = *((double *)highValParm);
+		// else if (this->attributeType == DOUBLE)
+		// {
+		// 	this->lowValDouble = *((double *)lowValParm);
+		// 	this->highValDouble = *((double *)highValParm);
 
-			// If lowValue > highValue, throw the exception BadScanrangeException.
-			if (this->lowValDouble > this->highValDouble)
-			{
-				throw BadScanrangeException();
-			}
-		}
-		else if (this->attributeType == STRING)
-		{
-			this->lowValString = (char *)lowValParm;
-			this->highValString = (char *)highValParm;
+		// 	// If lowValue > highValue, throw the exception BadScanrangeException.
+		// 	if (this->lowValDouble > this->highValDouble)
+		// 	{
+		// 		throw BadScanrangeException();
+		// 	}
+		// }
+		// else if (this->attributeType == STRING)
+		// {
+		// 	this->lowValString = (char *)lowValParm;
+		// 	this->highValString = (char *)highValParm;
 
-			// If lowValue > highValue, throw the exception BadScanrangeException.
-			if (this->lowValString.compare(this->highValString) > 0)
-			{
-				throw BadScanrangeException();
-			}
-		}
+		// 	// If lowValue > highValue, throw the exception BadScanrangeException.
+		// 	if (this->lowValString.compare(this->highValString) > 0)
+		// 	{
+		// 		throw BadScanrangeException();
+		// 	}
+		// }
 
 		// Both the high and low values are in a binary form, i.e., for integer
 		// keys, these point to the address of an integer.
@@ -639,14 +643,16 @@ namespace badgerdb
 		// that satisfies the scan parameters. Keep that page pinned in the buffer pool.
 		bufMgr->readPage(file, rootPageNum, currentPageData);
 		currentPageNum = rootPageNum;
+		std::cout << "current page num = " << currentPageNum << std::endl;
 		// bufMgr->unPinPage(file, currentPageNum, false);
 		// currentNode should start at the ROOT, which should be a NonLeafNode
 		NonLeafNodeInt *currentNode = (NonLeafNodeInt *)currentPageData;
 
 		// use the lowValParm to find the start of the range in the B-Tree
 		// this works because you can only use GT or GTE with the lowValParm
-
+		std::cout << "current level= " << currentNode->level << std::endl;
 		currentPageNum = traverse(this->lowValInt, rootPageNum, currentNode->level);
+		std::cout << "current page num after traverse = " << currentPageNum << std::endl;
 
 		// empty stack that was populated in our traverse
 		while (!treeStack.empty())
@@ -718,7 +724,7 @@ namespace badgerdb
 				// when i is the last one and still not out of loop so its not found in the node
 				if (i == leafOccupancy - 1)
 				{
-					cout << "Unpin line 713";
+					std::cout << "Unpin line 713\n";
 					bufMgr->unPinPage(file, currentPageNum, false);
 					if (currentNode->rightSibPageNo != 0)
 					{
@@ -763,7 +769,7 @@ namespace badgerdb
 
 		if (nextEntry == leafOccupancy)
 		{
-			cout << "Unpin line 757";
+			std::cout << "Unpin line 757\n";
 			bufMgr->unPinPage(file, currentPageNum, false);
 			if (currentNode->rightSibPageNo == 0)
 			{
@@ -838,11 +844,4 @@ namespace badgerdb
 		currentPageNum = nullPage;
 		nextEntry = -1;
 	}
-	//void BTreeIndex:printTree(){
-	//	bufMgr->readPage(file, rootPageNum, currentPageData);
-	//	currentPageNum = rootPageNum;	
-	// 
-	//
-	//
-	//}
 }
