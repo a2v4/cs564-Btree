@@ -240,8 +240,8 @@ namespace badgerdb
     int nodeOccupancy;
 
     /*
-    * Stack to keep track of parents of internal nodes
-    */
+     * Stack to keep track of parents of internal nodes
+     */
     std::stack<PageId> treeStack;
 
     // MEMBERS SPECIFIC TO SCANNING
@@ -306,7 +306,6 @@ namespace badgerdb
      */
     Operator highOp;
 
-
   public:
     /**
      * BTreeIndex Constructor.
@@ -352,7 +351,7 @@ namespace badgerdb
     //  */
     // void insertEntry(int key, const RecordId rid, bool isLeaf, PageId pageNo);
 
-    void splitLeaf(int key, const RecordId rid, PageId pageNo);
+    void splitLeaf(LeafNodeInt *currNode, int key, const RecordId rid, PageId pageNo);
 
     void splitNonLeaf(NonLeafNodeInt *currNode, PageId pageNo, int key, PageId newSiblingPage);
 
@@ -386,7 +385,7 @@ namespace badgerdb
 
     PageId traverse(int key, PageId pageNo, int level);
 
-    void splitHelper(NonLeafNodeInt * currNode, PageId currPageId, int leftmostKey);
+    void splitHelper(NonLeafNodeInt *currNode, PageId currPageId, int leftmostKey);
 
     /**
      * Begin a filtered scan of the index.  For instance, if the method is called
