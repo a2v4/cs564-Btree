@@ -40,13 +40,11 @@ namespace badgerdb
 		this->attrByteOffset = attrByteOffset;
 		this->attributeType = attrType;
 
-		this->currentPageData = new Page;
-		this->currentPageNum = Page::INVALID_NUMBER;
+		this->currentPageData = nullptr;
 		this->rootPageNum = 2;
 		this->headerPageNum = 1;
 		this->scanExecuting = false;
 		this->nextEntry = -1;
-		
 
 		if (this->attributeType == INTEGER)
 		{
@@ -85,17 +83,20 @@ namespace badgerdb
 			metaInfoPage->attrType = attrType;
 			metaInfoPage->rootPageNo = rootPageNum;
 
-
 			// init root page for use
 			Page *rootPage;
 			bufMgrIn->allocPage(file, rootPageNum, rootPage);
-			
+
 			// initialize root
-			LeafNodeInt *root = (LeafNodeInt *)rootPage;
-			for (int i = 0; i < nodeOccupancy; i++) {
-				root->keyArray[i] = INT32_MAX; // Piazza @381
-				// root->pageNoArray[i] = Page::INVALID_NUMBER;
-			}
+			LeafNodeInt *rootLeafNode = (LeafNodeInt *)rootPage;
+			// for (int i = 0; i < nodeOccupancy; i++)
+			// {
+			// 	rootLeafNode->keyArray[i] = INT32_MAX; // Piazza @381
+			// 								   // root->pageNoArray[i] = Page::INVALID_NUMBER;
+			// }
+
+
+			rootLeafNode->rightSibPageNo = 0; // Page::INVALID
 
 			// unpin page, and mark dirty because we wrote the meta info to the header page
 			bufMgr->unPinPage(file, headerPageNum, true);
@@ -138,6 +139,7 @@ namespace badgerdb
 		scanExecuting = false;
 		bufMgr->flushFile(file);
 		delete file;
+		file = nullptr;
 	}
 
 	// -----------------------------------------------------------------------------
@@ -166,21 +168,20 @@ namespace badgerdb
 
 		// this is the same as above
 		insertToLeaf(key, rid, leafToInsertAt);
-		
-		// Unpin and flush to disk
-		bufMgr->unPinPage(file, rootPageNum, true);
 
-		//empty stack after each entry/traversal
+		// Unpin and flush to disk
+		// bufMgr->unPinPage(file, rootPageNum, true);
+
+		// empty stack after each entry/traversal
 		while (!treeStack.empty())
 		{
 			treeStack.pop();
 		}
 	}
 
-
 	/**
 	 * @brief Traverse B-Tree using  <rid, key> pair into a leaf at the given pageNo
-	 * 
+	 *
 	 * @param key the key to compare values to
 	 * @param pageNo the current page number/node should work with
 	 * @param level signifies the level we are working with
@@ -200,7 +201,8 @@ namespace badgerdb
 		bufMgr->readPage(file, pageNo, currPageData);
 
 		// push current pageNo so we know which nodes/pages we went to, and in which order
-		if (!treeStack.empty() && treeStack.top() == pageNo) {
+		if (!treeStack.empty() && treeStack.top() == pageNo)
+		{
 			return pageNo;
 		}
 		treeStack.push(pageNo);
@@ -212,7 +214,7 @@ namespace badgerdb
 		// make sure index is less than leaf occupancy limit
 		// check if KEY is larger than the current one we are at
 		// check if the page_number is valid for that entry at that index
-		while (currIndex < nodeOccupancy && key > currNonLeafNode->keyArray[currIndex]) // && currNonLeafNode->pageNoArray[currIndex] != Page::INVALID_NUMBER)
+		while (currIndex < nodeOccupancy && key > currNonLeafNode->keyArray[currIndex] && currNonLeafNode->pageNoArray[currIndex] != Page::INVALID_NUMBER)
 		{
 			// increment until we find the next place to go
 			currIndex++;
@@ -222,16 +224,14 @@ namespace badgerdb
 		PageId nextPageNo = currNonLeafNode->pageNoArray[currIndex + 1];
 		int nextLevel = currNonLeafNode->level;
 
-
 		// just READ, no writes
 		bufMgr->unPinPage(file, pageNo, false);
 
 		// recursive call to keep traversing
 		// go down a level so the traverse knows what level we are at
-		return traverse(key, nextPageNo, nextLevel-1);
+		return traverse(key, nextPageNo, nextLevel - 1);
 	}
 
-	
 	void BTreeIndex::sortedLeafEntry(LeafNodeInt *currLeafNode, RIDKeyPair<int> newPair)
 	{
 		// Insert new key in ascending order
@@ -267,28 +267,28 @@ namespace badgerdb
 		// [1, 2, 4, 4]
 		// keyArray[i] = 3;
 		// Goal: [1, 2, 3, 4]
-		// 1 2 4 
-		
-		//3 5 6 7
-		//i = 1
-		//3 5 5 7
+		// 1 2 4
+
+		// 3 5 6 7
+		// i = 1
+		// 3 5 5 7
 
 		for (int j = nodeOccupancy; j < i; j--)
 		{
 			currNonLeafNode->keyArray[j] = currNonLeafNode->keyArray[j - 1];
 			currNonLeafNode->pageNoArray[j] = currNonLeafNode->pageNoArray[j - 1];
 		}
-		
+
 		currNonLeafNode->keyArray[i] = key;
 		currNonLeafNode->pageNoArray[i] = currNonLeafNode->pageNoArray[i - 1];
-		currNonLeafNode->pageNoArray[i+1] = newPageId;
+		currNonLeafNode->pageNoArray[i + 1] = newPageId;
 	}
 
 	void BTreeIndex::insertToLeaf(int key, const RecordId rid, PageId pageNo)
 	{
 		RIDKeyPair<int> pair;
 		pair.set(rid, key);
-		
+
 		Page *currPageData;
 		bufMgr->readPage(file, pageNo, currPageData);
 		LeafNodeInt *currLeafNode = (LeafNodeInt *)currPageData;
@@ -305,15 +305,14 @@ namespace badgerdb
 		{
 			// split leaf
 			splitLeaf(key, rid, pageNo);
-			
 		}
 		else
 		{
 			// else, insert into existing leaf
 			sortedLeafEntry(currLeafNode, pair);
+			bufMgr->unPinPage(file, pageNo, true);
 		}
 
-		bufMgr->unPinPage(file, pageNo, true);
 	}
 
 	void BTreeIndex::splitLeaf(int key, const RecordId rid, PageId pageNo)
@@ -323,15 +322,16 @@ namespace badgerdb
 
 		Page *currPageData;
 		bufMgr->readPage(file, pageNo, currPageData);
-		LeafNodeInt *currNode = (LeafNodeInt *) currPageData;
+		LeafNodeInt *currNode = (LeafNodeInt *)currPageData;
 
-		if(pageNo == rootPageNum) { //if we are splitting the root for the first time
+		if (pageNo == rootPageNum)
+		{ // if we are splitting the root for the first time
 			/** create a new non leaf parent
 			 *  create a new leaf node as sibling
 			 *  push non leaf into stack
 			 *  redistribute keys and COPY up middle/leftmost key
 			 * connect the two leaf nodes
-			**/
+			 **/
 			// alloc new page for new non leaf node
 			Page *newPageData;
 			PageId newPageNo;
@@ -339,18 +339,18 @@ namespace badgerdb
 			NonLeafNodeInt *newInternalNode = new NonLeafNodeInt;
 			newInternalNode->level = 1;
 			rootPageNum = newPageNo;
-			
-			//Create sibling leaf node
+
+			// Create sibling leaf node
 			LeafNodeInt *newNode = new LeafNodeInt;
 			Page *newLeafPage;
 			PageId newLeafPageNo;
 			bufMgr->allocPage(file, newLeafPageNo, newLeafPage);
-			
+
 			// connect curr node to new leaf node
 			newNode->rightSibPageNo = currNode->rightSibPageNo;
 			currNode->rightSibPageNo = newLeafPageNo;
-			
-			//copy half the keys from previous leaf to new sibling leaf
+
+			// copy half the keys from previous leaf to new sibling leaf
 			bool insertedNewEntry = false;
 			int i = leafOccupancy / 2;
 			while (i < leafOccupancy)
@@ -359,18 +359,19 @@ namespace badgerdb
 				{
 					break;
 				}
-				if(currNode->keyArray[i] == key) {
+				if (currNode->keyArray[i] == key)
+				{
 					insertedNewEntry = true;
 				}
 				newNode->keyArray[i] = currNode->keyArray[i];
 				newNode->ridArray[i] = currNode->ridArray[i];
-				
-				//CLEAR PAGE NO,SET IT TO ZERO IN THE CURR NODE
+
+				// CLEAR PAGE NO,SET IT TO ZERO IN THE CURR NODE
 				currNode->keyArray[i] = 0;
 				currNode->ridArray[i].page_number = 0;
 				i++;
 			}
-		
+
 			int leftmostKey = newNode->keyArray[0];
 
 			// copy up leftmost key on new node up to the root
@@ -383,24 +384,25 @@ namespace badgerdb
 			bufMgr->unPinPage(file, newPageNo, true);
 			bufMgr->unPinPage(file, newLeafPageNo, true);
 			bufMgr->unPinPage(file, rootPageNum, true);
-			
-		} else { //if we are splitting a leaf node that is not the root
+		}
+		else
+		{ // if we are splitting a leaf node that is not the root
 			/**
 			 * split and redistribute
 			 * then Copy up middle key
 			 * then call insert To Non leaf
 			 */
-			//Create sibling leaf node
+			// Create sibling leaf node
 			LeafNodeInt *newNode = new LeafNodeInt;
 			Page *newLeafPage;
 			PageId newLeafPageNo;
 			bufMgr->allocPage(file, newLeafPageNo, newLeafPage);
-			
+
 			// connect curr node to new leaf node
 			newNode->rightSibPageNo = currNode->rightSibPageNo;
 			currNode->rightSibPageNo = newLeafPageNo;
-			
-			//copy half the keys from previous leaf to new sibling leaf
+
+			// copy half the keys from previous leaf to new sibling leaf
 			bool insertedNewEntry = false;
 			int i = leafOccupancy / 2;
 			while (i < leafOccupancy)
@@ -409,34 +411,34 @@ namespace badgerdb
 				{
 					break;
 				}
-				if(currNode->keyArray[i] == key) {
+				if (currNode->keyArray[i] == key)
+				{
 					insertedNewEntry = true;
 				}
 				newNode->keyArray[i] = currNode->keyArray[i];
 				newNode->ridArray[i] = currNode->ridArray[i];
-				
-				//CLEAR ENTRIES FROM CURRNODE, SET IT TO ZERO IN THE CURR NODE
+
+				// CLEAR ENTRIES FROM CURRNODE, SET IT TO ZERO IN THE CURR NODE
 				currNode->keyArray[i] = 0;
 				currNode->ridArray[i].page_number = 0;
 				i++;
 			}
 
-			//access parent of this leaf from the stack
+			// access parent of this leaf from the stack
 			PageId parentPageId = treeStack.top(); // https://www.cplusplus.com/reference/stack/stack/top/
 			treeStack.pop();
 
 			int leftmostKey = newNode->keyArray[0];
-						
+
 			// copy up leftmost key on new node up to the internal node parent
 			insertToNonLeaf(leftmostKey, parentPageId, newLeafPageNo);
-			
-			//unpin new sibling leaf node
+
+			// unpin new sibling leaf node
 			bufMgr->unPinPage(file, newLeafPageNo, true);
 		}
-		// unpin curr leaf node and 
+		// unpin curr leaf node and
 		bufMgr->unPinPage(file, pageNo, true);
 	}
-
 
 	void BTreeIndex::insertToNonLeaf(int key, PageId pageNo, PageId newSiblingPage)
 	{
@@ -445,7 +447,7 @@ namespace badgerdb
 		Page *currPageData;
 		bufMgr->readPage(file, pageNo, currPageData);
 		NonLeafNodeInt *currNonLeafNode = (NonLeafNodeInt *)currPageData;
-		
+
 		int occupancy = 0;
 		// make sure index is less than leaf occupancy limit
 		// check if the page_number is valid for that entry at that index
@@ -462,33 +464,37 @@ namespace badgerdb
 		else
 		{
 			// else, insert into existing node
-			//send in page id of new leaf node that this key will point to
+			// send in page id of new leaf node that this key will point to
 			sortedNonLeafEntry(currNonLeafNode, key, newSiblingPage);
+			bufMgr->unPinPage(file, pageNo, true);
 		}
 	}
 
 	void BTreeIndex::splitNonLeaf(NonLeafNodeInt *currNode, PageId pageNo, int key, PageId newSiblingPage)
 	{
-		//if the page we are splitting is the root of the tree, then reset rootpagenum
-		if (pageNo == rootPageNum) {
+		// if the page we are splitting is the root of the tree, then reset rootpagenum
+		if (pageNo == rootPageNum)
+		{
 			// working with the root page
 			Page *newRootPageData;
 			PageId newRootPageNo;
 			bufMgr->allocPage(file, newRootPageNo, newRootPageData);
-			NonLeafNodeInt *newNonLeafRootNode = (NonLeafNodeInt*)newRootPageData;
+			NonLeafNodeInt *newNonLeafRootNode = (NonLeafNodeInt *)newRootPageData;
 
 			newNonLeafRootNode->level = currNode->level + 1;
 			this->rootPageNum = newRootPageNo;
 
-			//insert new one
+			bufMgr->unPinPage(file, newRootPageNo, true);
+
+			// insert new one
 			treeStack.push(rootPageNum);
 		}
 
-		//create new sibling internal node
+		// create new sibling internal node
 		Page *newPageData;
 		PageId newPageNo;
 		bufMgr->allocPage(file, newPageNo, newPageData);
-		NonLeafNodeInt *newNonLeafNode = (NonLeafNodeInt*)newPageData;
+		NonLeafNodeInt *newNonLeafNode = (NonLeafNodeInt *)newPageData;
 		// copy half the keys from previous node to this one
 		bool insertedNewEntry = false; // currently, not being used/checked
 
@@ -501,13 +507,14 @@ namespace badgerdb
 			{
 				break;
 			}
-			if(currNode->keyArray[i] == key) {
+			if (currNode->keyArray[i] == key)
+			{
 				insertedNewEntry = true;
 			}
 			newNonLeafNode->keyArray[i] = currNode->keyArray[i];
 			newNonLeafNode->pageNoArray[i] = currNode->pageNoArray[i];
 
-			//Clearing out previous positions from left node (currNode)
+			// Clearing out previous positions from left node (currNode)
 			currNode->pageNoArray[i] = 0;
 			currNode->keyArray[i] = 0;
 			i++;
@@ -515,30 +522,28 @@ namespace badgerdb
 
 		newNonLeafNode->level = currNode->level;
 
-		if(!treeStack.empty()) {
-			//access parent Internal node from stack
+		if (!treeStack.empty())
+		{
+			// access parent Internal node from stack
 			PageId internalParentPageNo = treeStack.top();
 			treeStack.pop();
-			//push up middle key to parent internal node
+			// push up middle key to parent internal node
 			int leftmostKey = newNonLeafNode->keyArray[0];
 			insertToNonLeaf(leftmostKey, internalParentPageNo, newPageNo);
 		}
-		
-		
+
 		// take out the middle key from curr node
 		// [0, ... , 511]
 		for (int i = 0; i < (nodeOccupancy + 1) / 2; i++)
 		{
 			newNonLeafNode->keyArray[i] = newNonLeafNode->keyArray[i + 1];
-			newNonLeafNode->pageNoArray[i] = newNonLeafNode->pageNoArray[i+1];
+			newNonLeafNode->pageNoArray[i] = newNonLeafNode->pageNoArray[i + 1];
 		}
 
-		//unpin curr node and new node
+		// unpin curr node and new node
 		bufMgr->unPinPage(file, pageNo, true);
-		bufMgr->unPinPage(file, newPageNo, true);
+		bufMgr->unPinPage(file, pageNo, true);
 	}
-
-
 
 	// -----------------------------------------------------------------------------
 	// BTreeIndex::startScan
@@ -576,7 +581,6 @@ namespace badgerdb
 		}
 		this->lowOp = lowOpParm;
 		this->highOp = highOpParm;
-
 
 		// store scan settings into instance
 		if (this->attributeType == INTEGER)
@@ -636,13 +640,11 @@ namespace badgerdb
 
 		currentPageNum = traverse(this->lowValInt, rootPageNum, currentNode->level);
 
-		
-		//empty stack after each entry/traversal
+		// empty stack after each entry/traversal
 		while (!treeStack.empty())
 		{
 			treeStack.pop();
 		}
-
 
 		// PageId nextNodePageNum;
 		bool found = false;

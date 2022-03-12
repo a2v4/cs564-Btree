@@ -240,8 +240,8 @@ namespace badgerdb
     int nodeOccupancy;
 
     /*
-    * Stack to keep track of parents of internal nodes
-    */
+     * Stack to keep track of parents of internal nodes
+     */
     std::stack<PageId> treeStack;
 
     // MEMBERS SPECIFIC TO SCANNING
@@ -305,7 +305,6 @@ namespace badgerdb
      * High Operator. Can only be LT(<) or LTE(<=).
      */
     Operator highOp;
-
 
   public:
     /**
@@ -386,7 +385,7 @@ namespace badgerdb
 
     PageId traverse(int key, PageId pageNo, int level);
 
-    void splitHelper(NonLeafNodeInt * currNode, PageId currPageId, int leftmostKey);
+    void splitHelper(NonLeafNodeInt *currNode, PageId currPageId, int leftmostKey);
 
     /**
      * Begin a filtered scan of the index.  For instance, if the method is called
