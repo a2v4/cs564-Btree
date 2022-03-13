@@ -169,6 +169,8 @@ namespace badgerdb
 		//std::cout << "key = " << key << std::endl;
 		PageId leafToInsertAt = traverse(key, rootPageNum, 99999);
 
+		std::cout << "after traverse\n";
+
 		// this is the same as above
 		insertToLeaf(key, rid, leafToInsertAt);
 
@@ -245,6 +247,7 @@ namespace badgerdb
 
 	void BTreeIndex::insertToLeaf(int key, const RecordId rid, PageId pageNo)
 	{
+		std::cout << "inside insertToLeaf traverse\n";
 		RIDKeyPair<int> pair;
 		pair.set(rid, key);
 
@@ -264,6 +267,7 @@ namespace badgerdb
 		{
 			// split leaf
 			splitLeaf(currLeafNode, key, rid, pageNo);
+			std::cout << "line 270\n";
 		}
 		else
 		{
@@ -276,6 +280,7 @@ namespace badgerdb
 
 	void BTreeIndex::splitLeaf(LeafNodeInt *currNode, int key, const RecordId rid, PageId pageNo)
 	{
+		std::cout << "splitleaf\n";
 		RIDKeyPair<int> pair;
 		pair.set(rid, key);
 
@@ -283,8 +288,10 @@ namespace badgerdb
 		// bufMgr->readPage(file, pageNo, currPageData);
 		// //LeafNodeInt *currNode = (LeafNodeInt *)currPageData;
 
-		if (pageNo == rootPageNum)
-		{ // if we are splitting the root for the first time
+		if (pageNo == initialRootPageNum)
+		{ 
+			std::cout << "293\n";
+			// if we are splitting the root for the first time
 			/** create a new non leaf parent
 			 *  create a new leaf node as sibling
 			 *  push non leaf into stack
@@ -351,7 +358,9 @@ namespace badgerdb
 			// bufMgr->unPinPage(file, pageNo, true);
 		}
 		else
-		{ // if we are splitting a leaf node that is not the root
+		{ 
+			std::cout << "362\n";
+			// if we are splitting a leaf node that is not the root
 			/**
 			 * split and redistribute
 			 * then Copy up middle key
@@ -576,6 +585,20 @@ namespace badgerdb
 	 * @throws  NoSuchKeyFoundException If there is no key in the B+ tree that satisfies the scan criteria.
 	 **/
 
+	void BTreeIndex::findNextNonLeafNode(NonLeafNodeInt *curNode, PageId &nextNodeNum, int key)
+	{
+		int i = nodeOccupancy;
+		while(i >= 0 && (curNode->pageNoArray[i] == 0))
+		{
+			i--;
+		}
+		while(i > 0 && (curNode->keyArray[i-1] >= key))
+		{
+			i--;
+		}
+		nextNodeNum = curNode->pageNoArray[i];
+	}
+
 	void BTreeIndex::startScan(const void *lowValParm,
 							   const Operator lowOpParm,
 							   const void *highValParm,
@@ -607,61 +630,53 @@ namespace badgerdb
 			}
 		}
 
-		// else if (this->attributeType == DOUBLE)
-		// {
-		// 	this->lowValDouble = *((double *)lowValParm);
-		// 	this->highValDouble = *((double *)highValParm);
-
-		// 	// If lowValue > highValue, throw the exception BadScanrangeException.
-		// 	if (this->lowValDouble > this->highValDouble)
-		// 	{
-		// 		throw BadScanrangeException();
-		// 	}
-		// }
-		// else if (this->attributeType == STRING)
-		// {
-		// 	this->lowValString = (char *)lowValParm;
-		// 	this->highValString = (char *)highValParm;
-
-		// 	// If lowValue > highValue, throw the exception BadScanrangeException.
-		// 	if (this->lowValString.compare(this->highValString) > 0)
-		// 	{
-		// 		throw BadScanrangeException();
-		// 	}
-		// }
-
 		// Both the high and low values are in a binary form, i.e., for integer
 		// keys, these point to the address of an integer.
 
 		// Start from root to find out the leaf page that contains the first RecordID
 		// that satisfies the scan parameters. Keep that page pinned in the buffer pool.
-		// currentPageNum = rootPageNum;
-		// bufMgr->readPage(file, rootPageNum, currentPageData);
-		// bufMgr->unPinPage(file, currentPageNum, true);
 		scanExecuting = true;
 		// Start from root to find out the leaf page that contains the first RecordID
 		// that satisfies the scan parameters. Keep that page pinned in the buffer pool.
-		bufMgr->readPage(file, rootPageNum, currentPageData);
 		currentPageNum = rootPageNum;
+		std::cout << "current page data = " << currentPageData << std::endl;
+		bufMgr->readPage(file, rootPageNum, currentPageData);
 		std::cout << "current page num = " << currentPageNum << std::endl;
 		// bufMgr->unPinPage(file, currentPageNum, false);
-		// currentNode should start at the ROOT, which should be a NonLeafNode
-		NonLeafNodeInt *currentNode = (NonLeafNodeInt *)currentPageData;
-
-		// use the lowValParm to find the start of the range in the B-Tree
-		// this works because you can only use GT or GTE with the lowValParm
-		std::cout << "current level= " << currentNode->level << std::endl;
-		currentPageNum = traverse(this->lowValInt, rootPageNum, currentNode->level);
-		std::cout << "current page num after traverse = " << currentPageNum << std::endl;
-
-		// empty stack that was populated in our traverse
-		while (!treeStack.empty())
-		{
-			treeStack.pop();
+		if(initialRootPageNum != rootPageNum) { //root is a non-leaf
+			// currentNode should start at the ROOT, which should be a NonLeafNode
+			NonLeafNodeInt *currentNode = (NonLeafNodeInt *)currentPageData;
+			bool foundLeaf = false;
+			while(!foundLeaf)
+			{
+				// Cast page to node
+				currentNode = (NonLeafNodeInt *) currentPageData;
+				// Check if this is the level above the leaf, if yes, the next level is the leaf
+				if(currentNode->level == 1)
+				{
+					foundLeaf = true;
+				}
+				PageId nextPageNum;
+				findNextNonLeafNode(currentNode, nextPageNum, lowValInt);
+				bufMgr->unPinPage(file, currentPageNum, false);
+				currentPageNum = nextPageNum;
+				// read the nextPage
+				bufMgr->readPage(file, currentPageNum, currentPageData);
+				// use the lowValParm to find the start of the range in the B-Tree
+				// this works because you can only use GT or GTE with the lowValParm
+				std::cout << "current level= " << currentNode->level << std::endl;
+				//currentPageNum = traverse(this->lowValInt, rootPageNum, currentNode->level);
+				std::cout << "current page num after traverse = " << currentPageNum << std::endl;
+				// // empty stack that was populated in our traverse
+				// while (!treeStack.empty())
+				// {
+				// 	treeStack.pop();
+				// }
+				
+			}
 		}
-
-		bufMgr->readPage(file, currentPageNum, currentPageData);
-
+		 // Now the curNode is leaf node try to find the smallest one that satisefy the OP
+		
 		while (true)
 		{
 			int loop = 0;
@@ -741,8 +756,9 @@ namespace badgerdb
 			{
 				break;
 			}
+			
 		}
-
+		bufMgr->unPinPage(file, currentPageNum, false);
 		// // If there is no key in the B+ tree that satisfies the scan criteria,
 		// // throw the exception NoSuchKeyFoundException.
 		// if () {

@@ -392,6 +392,9 @@ namespace badgerdb
 
     void splitHelper(NonLeafNodeInt *currNode, PageId currPageId, int leftmostKey);
 
+    void findNextNonLeafNode(NonLeafNodeInt *curNode, PageId &nextNodeNum, int key);
+
+
     /**
      * Begin a filtered scan of the index.  For instance, if the method is called
      * using ("a",GT,"d",LTE) then we should seek all entries with a value
