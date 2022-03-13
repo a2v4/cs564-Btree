@@ -367,11 +367,11 @@ namespace badgerdb
 			 * then call insert To Non leaf
 			 */
 			// Create sibling leaf node
-			LeafNodeInt *newNode = new LeafNodeInt;
 			Page *newLeafPage;
 			PageId newLeafPageNo;
+			std::cout << "372\n";
 			bufMgr->allocPage(file, newLeafPageNo, newLeafPage);
-
+			LeafNodeInt *newNode = (LeafNodeInt *) newLeafPage;
 			// connect curr node to new leaf node
 			newNode->rightSibPageNo = currNode->rightSibPageNo;
 			currNode->rightSibPageNo = newLeafPageNo;
@@ -379,6 +379,7 @@ namespace badgerdb
 			// copy half the keys from previous leaf to new sibling leaf
 			bool insertedNewEntry = false;
 			int i = leafOccupancy / 2;
+			std::cout << "384\n";
 			while (i < leafOccupancy)
 			{
 				if (insertedNewEntry)
@@ -403,7 +404,7 @@ namespace badgerdb
 			treeStack.pop();
 
 			int leftmostKey = newNode->keyArray[0];
-
+			std::cout << "409\n";
 			// copy up leftmost key on new node up to the internal node parent
 			insertToNonLeaf(leftmostKey, parentPageId, newLeafPageNo);
 
@@ -443,7 +444,7 @@ namespace badgerdb
 			// send in page id of new leaf node that this key will point to
 			sortedNonLeafEntry(currNonLeafNode, key, newSiblingPage);
 			std::cout << "Unpin line 425\n";
-			bufMgr->unPinPage(file, pageNo, true);
+			//bufMgr->unPinPage(file, pageNo, true);
 			//bufMgr->unPinPage(file, newSiblingPage, true);
 		}
 	}
@@ -526,6 +527,7 @@ namespace badgerdb
 	void BTreeIndex::sortedLeafEntry(LeafNodeInt *currLeafNode, RIDKeyPair<int> newPair)
 	{
 		
+
 		// Insert new key in ascending order
 		int i = 0;
 		while (i < leafOccupancy && (currLeafNode->keyArray[i] < newPair.key))
@@ -585,19 +587,18 @@ namespace badgerdb
 	 * @throws  NoSuchKeyFoundException If there is no key in the B+ tree that satisfies the scan criteria.
 	 **/
 
-	void BTreeIndex::findNextNonLeafNode(NonLeafNodeInt *curNode, PageId &nextNodeNum, int key)
-	{
-		int i = nodeOccupancy;
-		while(i >= 0 && (curNode->pageNoArray[i] == 0))
-		{
-			i--;
-		}
-		while(i > 0 && (curNode->keyArray[i-1] >= key))
-		{
-			i--;
-		}
-		nextNodeNum = curNode->pageNoArray[i];
-	}
+			void BTreeIndex::findNextNonLeafNode(NonLeafNodeInt * curNode, PageId & nextNodeNum, int key)
+			{
+				int i = nodeOccupancy;
+				while (i >= 0 && (curNode->pageNoArray[i] == 0))
+				{
+					i--;
+				}
+				while (i > 0 && (curNode->keyArray[i - 1] >= key))
+				{
+					i--;
+				}
+			}
 
 	void BTreeIndex::startScan(const void *lowValParm,
 							   const Operator lowOpParm,
